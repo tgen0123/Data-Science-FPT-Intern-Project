@@ -20,7 +20,7 @@ app.teardown_appcontext(close_db)
 def index():
     return jsonify({
         "name": "IP Geolocation API",
-        "version": "2.0",
+        "version": "2.1",
         "description": "API for tracking user IPs and getting their geolocation",
         "endpoints": [
             "/api/authenticate - Test your API key",
@@ -28,7 +28,9 @@ def index():
             "/api/user/<username> - Get IPs for a username",
             "/api/users - List all users (admin only)",
             "/api/stats - Get database statistics (admin only)",
-            "/api/key/generate - Generate new API key (admin only, POST)"
+            "/api/key/generate - Generate new API key (admin only, POST)",
+            "/api/key/<key> - Get key details (GET), Update key (PUT), Delete key (DELETE) (admin only)",
+            "/api/keys - List all API keys (admin only, GET)"
         ]
     })
 
