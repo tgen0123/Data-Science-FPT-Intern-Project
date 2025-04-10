@@ -6,7 +6,7 @@ from helper import load_data, init_db, close_db
 app = Flask(__name__)
 
 # SQL Server Configuration - Update the server name to match your SQL Server instance
-app.config['SQLSERVER_HOST'] = 'LAPTOP-OKO1NVCM\\SQLEXPRESS'  # Your SQL Server instance
+app.config['SQLSERVER_HOST'] = 'IT-ONDANGKN\\SQLEXPRESS'  # Your SQL Server instance
 app.config['SQLSERVER_DB'] = 'ip_location_api'                # Database name
 
 # Register the API blueprint
