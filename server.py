@@ -12,12 +12,18 @@ app.config['SQLSERVER_DB'] = 'ip_location_api'                # Database name
 # Register the API blueprint
 app.register_blueprint(api_bp)
 
-# Register database close function
+# Register database close function to ensure connections are closed after each request
 app.teardown_appcontext(close_db)
 
 # Add a root route for basic API info
 @app.route('/')
 def index():
+    """
+    Root endpoint that provides API information and available endpoints
+    
+    Returns:
+        JSON with API name, version, description, and list of endpoints
+    """
     return jsonify({
         "name": "IP Geolocation API",
         "version": "2.1",
@@ -35,13 +41,21 @@ def index():
     })
 
 # Configuration
-DATA_FILE = 'sample_data.csv'
+DATA_FILE = 'sample_data.csv'  # File containing initial data to load
 HOST = '0.0.0.0'  # Listen on all interfaces
-PORT = 5000
-DEBUG = True      # Set to False in production
+PORT = 5000       # Port to serve the API
+DEBUG = True      # Enable debug mode (set to False in production)
 
 # Initialize the application
 def init_app():
+    """
+    Initialize the application
+    
+    Sets up the database and loads initial data if needed
+    
+    Returns:
+        Configured Flask application instance
+    """
     # Initialize the database (create tables if they don't exist)
     with app.app_context():
         init_db()
@@ -53,6 +67,7 @@ def init_app():
             cursor.execute('SELECT COUNT(*) FROM user_ip')
             count = cursor.fetchone()[0]
             
+            # If the database is empty, load sample data
             if count == 0:
                 print("Database is empty, loading initial data...")
                 records = load_data(DATA_FILE)
