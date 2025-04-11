@@ -44,7 +44,7 @@ def index():
 DATA_FILE = 'sample_data.csv'  # File containing initial data to load
 HOST = '0.0.0.0'  # Listen on all interfaces
 PORT = 5000       # Port to serve the API
-DEBUG = True      # Enable debug mode (set to False in production)
+DEBUG = True      # Enable debug mode 
 
 # Initialize the application
 def init_app():

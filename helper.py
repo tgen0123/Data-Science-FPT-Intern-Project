@@ -180,6 +180,10 @@ def close_db(e: Exception = None) -> None:
     if db is not None:
         db.close()
 
+
+
+
+
 # ---- Authentication Functions ----
 
 def require_api_key(f: callable) -> callable:
@@ -294,6 +298,11 @@ def is_admin(api_user: dict) -> bool:
         Returns False if api_user is None or doesn't have an is_admin attribute
     """
     return api_user and api_user.get('is_admin', False)
+
+
+
+
+
 
 # ---- Data Processing Functions ----
 
