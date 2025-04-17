@@ -1,8 +1,142 @@
-from flask import Blueprint, jsonify, request, g
-from helper import get_location, get_user_records, require_api_key, is_admin, create_new_api_key, get_cursor, dict_from_row, get_db
+# api_keys.py
+import secrets
+from flask import Blueprint, jsonify, request, g, current_app
+from functools import wraps
+import pyodbc
 
 # Create a Blueprint for API routes
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+# ---- Database Functions ----
+
+def get_db():
+    """
+    Get database connection, creating one if needed.
+    
+    Returns:
+        pyodbc.Connection: A connection to the SQL Server database
+    """
+    db = getattr(g, '_database', None)
+    if db is None:
+        # Connect to SQL Server using Windows Authentication
+        connection_string = (
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={current_app.config['SQLSERVER_HOST']};"
+            f"DATABASE={current_app.config['SQLSERVER_DB']};"
+            "Trusted_Connection=yes;"
+        )
+        db = g._database = pyodbc.connect(connection_string)
+    return db
+
+def get_cursor():
+    """
+    Get a cursor from the database connection.
+    
+    Returns:
+        pyodbc.Cursor: A cursor object for executing SQL queries
+    """
+    return get_db().cursor()
+
+def dict_from_row(row, columns):
+    """
+    Convert a pyodbc row to a dictionary.
+    
+    Args:
+        row (pyodbc.Row): A pyodbc row result from a query
+        columns (list[str]): List of column names from cursor.description
+        
+    Returns:
+        dict: Dictionary mapping column names to row values
+    """
+    return {columns[i]: row[i] for i in range(len(columns))}
+
+# ---- Authentication Functions ----
+
+def require_api_key(f):
+    """
+    Decorator to require API key authentication.
+    
+    Args:
+        f (callable): The function to wrap
+        
+    Returns:
+        callable: Decorated function that requires API key authentication
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        api_key = request.headers.get('X-API-Key')
+        
+        if not api_key:
+            return jsonify({"error": "API key required"}), 401
+            
+        # Check if API key exists in database
+        cursor = get_cursor()
+        cursor.execute('SELECT * FROM api_keys WHERE [key] = ?', (api_key,))
+        
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"error": "Invalid API key"}), 401
+        
+        # Get column names to create a dictionary
+        columns = [column[0] for column in cursor.description]
+        api_user = dict_from_row(row, columns)
+        
+        # Add the API user info to the request
+        request.api_user = {
+            'user': api_user['username'],
+            'rate_limit': api_user['rate_limit'],
+            'is_admin': bool(api_user['is_admin'])
+        }
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def is_admin(api_user):
+    """
+    Check if the API user has admin privileges.
+    
+    Args:
+        api_user (dict): API user information dictionary
+        
+    Returns:
+        bool: True if the user has admin privileges, False otherwise
+    """
+    return api_user and api_user.get('is_admin', False)
+
+def generate_api_key():
+    """
+    Generate a random API key.
+    
+    Returns:
+        str: A secure random API key string
+    """
+    return secrets.token_urlsafe(32)
+
+def create_new_api_key(username, rate_limit=100, is_admin=False):
+    """
+    Create a new API key for a user and store in database.
+    
+    Args:
+        username (str): Username to associate with the key
+        rate_limit (int, optional): Maximum requests per timeframe. Defaults to 100.
+        is_admin (bool, optional): Whether the key has admin privileges. Defaults to False.
+        
+    Returns:
+        str: The newly generated API key
+    """
+    new_key = generate_api_key()
+    
+    cursor = get_cursor()
+    cursor.execute(
+        'INSERT INTO api_keys ([key], username, rate_limit, is_admin) VALUES (?, ?, ?, ?)',
+        (new_key, username, rate_limit, 1 if is_admin else 0)
+    )
+    db = get_db()
+    db.commit()
+    
+    return new_key
+
+# ---- API Endpoints ----
 
 @api_bp.route('/key/generate', methods=['POST'])
 @require_api_key
@@ -12,28 +146,6 @@ def create_api_key():
     
     This endpoint creates a new API key associated with the specified username
     and configuration. Access is restricted to API keys with admin privileges.
-    
-    Request Body:
-        JSON object containing:
-        - username (str): Required - username to associate with the key
-        - rate_limit (int): Optional - maximum requests allowed (default: 100)
-        - is_admin (bool): Optional - admin privileges flag (default: False)
-    
-    Returns:
-        flask.Response: JSON response containing:
-            - key (str): The newly generated API key
-            - user (str): Username associated with the key
-            - rate_limit (int): Rate limit for the key
-            - is_admin (bool): Admin privileges status
-            
-        Or if unauthorized:
-            - error (str): Error message (status code 403)
-            
-        Or if request is invalid:
-            - error (str): Error message (status code 400)
-            
-        Or if an internal error occurs:
-            - error (str): Error message (status code 500)
     """
     if not is_admin(request.api_user):
         return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
@@ -64,31 +176,12 @@ def create_api_key():
 
 @api_bp.route('/key/<key>', methods=['GET'])
 @require_api_key
-def get_api_key_details(key: str):
+def get_api_key_details(key):
     """
     Get details about an API key - restricted to admin users.
     
     This endpoint retrieves detailed information about a specific API key.
     Access is restricted to API keys with admin privileges.
-    
-    Args:
-        key (str): API key to retrieve details for
-        
-    Returns:
-        flask.Response: JSON response containing:
-            - key (str): The API key
-            - username (str): Username associated with the key
-            - rate_limit (int): Rate limit for the key
-            - is_admin (bool): Admin privileges status
-            
-        Or if unauthorized:
-            - error (str): Error message (status code 403)
-            
-        Or if key not found:
-            - error (str): Error message (status code 404)
-            
-        Or if an internal error occurs:
-            - error (str): Error message (status code 500)
     """
     if not is_admin(request.api_user):
         return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
@@ -116,41 +209,12 @@ def get_api_key_details(key: str):
 
 @api_bp.route('/key/<key>', methods=['PUT'])
 @require_api_key
-def update_api_key(key: str):
+def update_api_key(key):
     """
     Update an API key's properties - restricted to admin users.
     
     This endpoint updates the properties of an existing API key.
     Access is restricted to API keys with admin privileges.
-    
-    Args:
-        key (str): API key to update
-        
-    Request Body:
-        JSON object containing one or more of:
-        - username (str): New username to associate with the key
-        - rate_limit (int): New rate limit
-        - is_admin (bool): New admin status
-        
-    Returns:
-        flask.Response: JSON response containing:
-            - message (str): Success message
-            - key (str): The API key
-            - username (str): Updated username
-            - rate_limit (int): Updated rate limit
-            - is_admin (bool): Updated admin status
-            
-        Or if unauthorized:
-            - error (str): Error message (status code 403)
-            
-        Or if request is invalid:
-            - error (str): Error message (status code 400)
-            
-        Or if key not found:
-            - error (str): Error message (status code 404)
-            
-        Or if an internal error occurs:
-            - error (str): Error message (status code 500)
     """
     if not is_admin(request.api_user):
         return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
@@ -214,34 +278,13 @@ def update_api_key(key: str):
 
 @api_bp.route('/key/<key>', methods=['DELETE'])
 @require_api_key
-def delete_api_key(key: str):
+def delete_api_key(key):
     """
     Delete an API key - restricted to admin users.
     
     This endpoint permanently deletes an API key from the database.
     Access is restricted to API keys with admin privileges.
     The key being used for authentication cannot be deleted.
-    
-    Args:
-        key (str): API key to delete
-        
-    Returns:
-        flask.Response: JSON response containing:
-            - message (str): Success message
-            - key (str): The deleted API key
-            - username (str): Username that was associated with the key
-            
-        Or if unauthorized:
-            - error (str): Error message (status code 403)
-            
-        Or if trying to delete the current key:
-            - error (str): Error message (status code 400)
-            
-        Or if key not found:
-            - error (str): Error message (status code 404)
-            
-        Or if an internal error occurs:
-            - error (str): Error message (status code 500)
     """
     if not is_admin(request.api_user):
         return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
@@ -284,21 +327,6 @@ def list_api_keys():
     
     This endpoint retrieves all API keys in the system.
     Access is restricted to API keys with admin privileges.
-    
-    Returns:
-        flask.Response: JSON response containing:
-            - count (int): Number of API keys
-            - keys (list[dict]): List of dictionaries, each containing:
-                - key (str): API key
-                - username (str): Username associated with the key
-                - rate_limit (int): Rate limit for the key
-                - is_admin (bool): Admin privileges status
-                
-        Or if unauthorized:
-            - error (str): Error message (status code 403)
-            
-        Or if an internal error occurs:
-            - error (str): Error message (status code 500)
     """
     if not is_admin(request.api_user):
         return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
@@ -326,83 +354,6 @@ def list_api_keys():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@api_bp.route('/location/<ip>')
-@require_api_key
-def ip_location(ip: str):
-    """
-    Get location for an IP address.
-    
-    This endpoint retrieves geolocation information for the specified IP address
-    using the ipinfo.io service. The information is cached to avoid redundant
-    API calls for the same IP.
-    
-    Args:
-        ip (str): IP address to geolocate
-        
-    Returns:
-        flask.Response: JSON response containing geolocation data:
-            - ip: The IP address
-            - hostname (optional): Hostname if available
-            - city (optional): City name
-            - region (optional): Region/state
-            - country (optional): Country code
-            - loc (optional): Latitude,longitude
-            - org (optional): Organization/ISP
-            - postal (optional): Postal code
-            - timezone (optional): Timezone
-            
-            Or in case of an error:
-            - error (str): Error message
-    """
-    location = get_location(ip)
-    return jsonify(location)
-
-@api_bp.route('/user/<username>')
-@require_api_key
-def user_ips(username: str):
-    """
-    Get IPs for a username.
-    
-    This endpoint retrieves all IP addresses associated with the specified username
-    and their geolocation information.
-    
-    Args:
-        username (str): Username to query
-        
-    Returns:
-        flask.Response: JSON response containing:
-            - username (str): The requested username
-            - ip_count (int): Number of IP addresses found
-            - locations (list[dict]): List of dictionaries, each containing:
-                - ip (str): IP address
-                - location (dict): Geolocation information from ipinfo.io
-                
-        Or if username not found:
-            - error (str): Error message (status code 404)
-    """
-    # Find all records for this username
-    records = get_user_records(username)
-    
-    if not records:
-        return jsonify({"error": "Username not found"}), 404
-    
-    # Get location for each IP
-    results = []
-    for record in records:
-        ip = record['ip']
-        location = get_location(ip)
-        
-        results.append({
-            "ip": ip,
-            "location": location
-        })
-    
-    return jsonify({
-        "username": username,
-        "ip_count": len(results),
-        "locations": results
-    })
-
 @api_bp.route('/authenticate')
 @require_api_key
 def authenticate():
@@ -412,13 +363,6 @@ def authenticate():
     This endpoint serves as a simple way for clients to verify 
     that their API key is valid and to retrieve information about
     their account, including username, rate limit, and admin status.
-    
-    Returns:
-        flask.Response: JSON response containing:
-            - authenticated (bool): Always True if request reaches this point
-            - user (str): Username associated with the API key
-            - rate_limit (int): Rate limit for the API key
-            - is_admin (bool): Whether the API key has admin privileges
     """
     return jsonify({
         "authenticated": True,
@@ -434,21 +378,13 @@ def list_users():
     List all users in the system (admin only).
     
     This endpoint retrieves a list of all unique usernames from the 
-    user_ip table. It requires an API key with admin privileges.
-    
-    Returns:
-        flask.Response: JSON response containing:
-            - count (int): Number of unique users
-            - users (list[str]): List of unique usernames
-            
-        Or if unauthorized:
-            - error (str): Error message (status code 403)
+    vpn_logs table. It requires an API key with admin privileges.
     """
     if not is_admin(request.api_user):
         return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
     
     cursor = get_cursor()
-    cursor.execute('SELECT DISTINCT username FROM user_ip')
+    cursor.execute('SELECT DISTINCT username FROM vpn_logs')
     
     users = [row[0] for row in cursor.fetchall()]
     
@@ -463,23 +399,8 @@ def get_stats():
     """
     Get statistics about the database (admin only).
     
-    This endpoint provides various statistics about the database, including:
-    - Number of unique users
-    - Number of unique IP addresses
-    - Total number of user-IP records
-    - Number of API keys
-    
+    This endpoint provides various statistics about the database.
     Access is restricted to API keys with admin privileges.
-    
-    Returns:
-        flask.Response: JSON response containing:
-            - users (int): Count of unique users
-            - unique_ips (int): Count of unique IP addresses
-            - total_records (int): Total count of user-IP records
-            - api_keys (int): Count of API keys
-            
-        Or if unauthorized:
-            - error (str): Error message (status code 403)
     """
     if not is_admin(request.api_user):
         return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
@@ -487,15 +408,15 @@ def get_stats():
     cursor = get_cursor()
     
     # Get user count
-    cursor.execute('SELECT COUNT(DISTINCT username) AS user_count FROM user_ip')
+    cursor.execute('SELECT COUNT(DISTINCT username) AS user_count FROM vpn_logs')
     user_count = cursor.fetchone()[0]
     
     # Get IP count
-    cursor.execute('SELECT COUNT(DISTINCT ip) AS ip_count FROM user_ip')
+    cursor.execute('SELECT COUNT(DISTINCT source_ip) AS ip_count FROM vpn_logs')
     ip_count = cursor.fetchone()[0]
     
     # Get total records
-    cursor.execute('SELECT COUNT(*) AS record_count FROM user_ip')
+    cursor.execute('SELECT COUNT(*) AS record_count FROM vpn_logs')
     record_count = cursor.fetchone()[0]
     
     # Get API key count
