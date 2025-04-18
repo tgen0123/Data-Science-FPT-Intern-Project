@@ -4,108 +4,15 @@ import requests
 from flask import Blueprint, jsonify, request, g, current_app
 from functools import wraps
 import pyodbc
+import numpy as np
+from datetime import datetime
 
 # Import preprocessing module
-from data_preprocessor import preprocess_data
+from data_preprocessor import preprocess_data, clean_username, extract_department
+from helper import get_db, get_cursor, dict_from_row, require_api_key, is_admin
 
 # Create a Blueprint for VPN analysis routes
 vpn_bp = Blueprint('vpn', __name__, url_prefix='/api/vpn')
-
-# ---- Database Functions ----
-
-def get_db():
-    """
-    Get database connection, creating one if needed.
-    
-    Returns:
-        pyodbc.Connection: A connection to the SQL Server database
-    """
-    db = getattr(g, '_database', None)
-    if db is None:
-        # Connect to SQL Server using Windows Authentication
-        connection_string = (
-            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-            f"SERVER={current_app.config['SQLSERVER_HOST']};"
-            f"DATABASE={current_app.config['SQLSERVER_DB']};"
-            "Trusted_Connection=yes;"
-        )
-        db = g._database = pyodbc.connect(connection_string)
-    return db
-
-def get_cursor():
-    """
-    Get a cursor from the database connection.
-    
-    Returns:
-        pyodbc.Cursor: A cursor object for executing SQL queries
-    """
-    return get_db().cursor()
-
-def dict_from_row(row, columns):
-    """
-    Convert a pyodbc row to a dictionary.
-    
-    Args:
-        row (pyodbc.Row): A pyodbc row result from a query
-        columns (list[str]): List of column names from cursor.description
-        
-    Returns:
-        dict: Dictionary mapping column names to row values
-    """
-    return {columns[i]: row[i] for i in range(len(columns))}
-
-# ---- Authentication Functions ----
-
-def require_api_key(f):
-    """
-    Decorator to require API key authentication.
-    
-    Args:
-        f (callable): The function to wrap
-        
-    Returns:
-        callable: Decorated function that requires API key authentication
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        api_key = request.headers.get('X-API-Key')
-        
-        if not api_key:
-            return jsonify({"error": "API key required"}), 401
-            
-        # Check if API key exists in database
-        cursor = get_cursor()
-        cursor.execute('SELECT * FROM api_keys WHERE [key] = ?', (api_key,))
-        
-        row = cursor.fetchone()
-        if not row:
-            return jsonify({"error": "Invalid API key"}), 401
-        
-        # Get column names to create a dictionary
-        columns = [column[0] for column in cursor.description]
-        api_user = dict_from_row(row, columns)
-        
-        # Add the API user info to the request
-        request.api_user = {
-            'user': api_user['username'],
-            'rate_limit': api_user['rate_limit'],
-            'is_admin': bool(api_user['is_admin'])
-        }
-        
-        return f(*args, **kwargs)
-    return decorated_function
-
-def is_admin(api_user):
-    """
-    Check if the API user has admin privileges.
-    
-    Args:
-        api_user (dict): API user information dictionary
-        
-    Returns:
-        bool: True if the user has admin privileges, False otherwise
-    """
-    return api_user and api_user.get('is_admin', False)
 
 # ---- External IP Location API ----
 
@@ -145,32 +52,66 @@ def extract_vpn_features(df):
         # Create a new dataframe for VPN features
         vpn_df = pd.DataFrame()
         
-        # Extract timestamp - using _time which appears in your sample data
-        if '_time' in df.columns:
-            vpn_df['timestamp'] = pd.to_datetime(df['_time'])
+        # Extract timestamp - using timestamp from cleaned data
+        if 'timestamp' in df.columns:
+            # Convert timestamp string to datetime for database storage
+            vpn_df['timestamp'] = pd.to_datetime(
+                df['timestamp'].str.replace('\\+07:00', ''), 
+                errors='coerce'
+            )
+        elif '_time' in df.columns:
+            # Fallback to _time column if timestamp doesn't exist
+            vpn_df['timestamp'] = pd.to_datetime(df['_time'], errors='coerce')
         
-        # Extract username - use SubjectUserName directly
-        if 'SubjectUserName' in df.columns:
-            vpn_df['username'] = df['SubjectUserName']
+        # Extract username - using cleaned username
+        if 'subjectusername' in df.columns:
+            vpn_df['username'] = df['subjectusername']
         
         # Extract source IP - use CallingStationID directly
-        if 'CallingStationID' in df.columns:
-            vpn_df['source_ip'] = df['CallingStationID']
+        if 'callingstationid' in df.columns:
+            vpn_df['source_ip'] = df['callingstationid']
         
-        # Extract department from organizational path
-        if 'FullyQualifiedSubjectUserName' in df.columns:
-            # Based on the sample data, this pattern should work better
-            vpn_df['department'] = df['FullyQualifiedSubjectUserName'].str.extract(
-                r'fsoft\.fpt\.vn/FPT/FIS/([^/]+)'
-            )
+        # Extract department from already processed field if available
+        if 'department' in df.columns:
+            vpn_df['department'] = df['department']
+        # Fall back to extracting it ourselves
+        elif 'fullyqualifiedsubjectusername' in df.columns:
+            vpn_df['department'] = df['fullyqualifiedsubjectusername'].apply(extract_department)
         
         # Extract VPN gateway
-        if 'NASIdentifier' in df.columns:
-            vpn_df['vpn_gateway'] = df['NASIdentifier']
+        if 'nasidentifier' in df.columns:
+            vpn_df['vpn_gateway'] = df['nasidentifier']
         
         # Extract session ID
-        if 'AccountSessionIdentifier' in df.columns:
-            vpn_df['session_id'] = df['AccountSessionIdentifier']
+        if 'accountsessionidentifier' in df.columns:
+            vpn_df['session_id'] = df['accountsessionidentifier']
+        
+        # Extract hour_of_day if available (this was missing before)
+        if 'hour_of_day' in df.columns:
+            vpn_df['hour_of_day'] = df['hour_of_day']
+        
+        # Add time category if available
+        if 'time_category' in df.columns:
+            vpn_df['time_category'] = df['time_category']
+        # Otherwise calculate it if we have hour_of_day
+        elif 'hour_of_day' in df.columns:
+            vpn_df['time_category'] = pd.cut(
+                df['hour_of_day'],
+                bins=[0, 6, 12, 18, 24],
+                labels=['night_(0-6)', 'morning_(6-12)', 'afternoon_(12-18)', 'evening_(18-24)'],
+                include_lowest=True
+            )
+        # Otherwise calculate from timestamp
+        elif 'timestamp' in vpn_df.columns:
+            # Only calculate hour_of_day if it's not already set
+            if 'hour_of_day' not in vpn_df.columns:
+                vpn_df['hour_of_day'] = vpn_df['timestamp'].dt.hour
+            vpn_df['time_category'] = pd.cut(
+                vpn_df['hour_of_day'],
+                bins=[0, 6, 12, 18, 24],
+                labels=['night_(0-6)', 'morning_(6-12)', 'afternoon_(12-18)', 'evening_(18-24)'],
+                include_lowest=True
+            )
         
         # Ensure we have the essential columns
         if 'username' not in vpn_df.columns or 'source_ip' not in vpn_df.columns:
@@ -187,6 +128,7 @@ def extract_vpn_features(df):
     except Exception as e:
         print(f"Error extracting VPN features: {e}")
         return None
+    
 
 def load_vpn_data_to_db(df):
     """
@@ -204,7 +146,7 @@ def load_vpn_data_to_db(df):
     cursor = db.cursor()
     
     try:
-        # Create vpn_logs table if it doesn't exist - modified data types
+        # Create vpn_logs table if it doesn't exist - modified to include time_category
         cursor.execute('''
         IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[vpn_logs]') AND type in (N'U'))
         BEGIN
@@ -215,11 +157,14 @@ def load_vpn_data_to_db(df):
                 [source_ip] NVARCHAR(45) NOT NULL,
                 [department] NVARCHAR(255),
                 [vpn_gateway] NVARCHAR(100),
-                [session_id] NVARCHAR(100)
+                [session_id] NVARCHAR(100),
+                [hour_of_day] INT,
+                [time_category] NVARCHAR(50)
             )
             
             CREATE INDEX [idx_vpn_username] ON [dbo].[vpn_logs] ([username])
             CREATE INDEX [idx_vpn_source_ip] ON [dbo].[vpn_logs] ([source_ip])
+            CREATE INDEX [idx_vpn_time_category] ON [dbo].[vpn_logs] ([time_category])
         END
         ''')
         db.commit()
@@ -237,6 +182,13 @@ def load_vpn_data_to_db(df):
                 department = str(row.get('department', '')) if not pd.isna(row.get('department')) else None
                 vpn_gateway = str(row.get('vpn_gateway', '')) if not pd.isna(row.get('vpn_gateway')) else None
                 session_id = str(row.get('session_id', '')) if not pd.isna(row.get('session_id')) else None
+                
+                # Get time category if available
+                hour_of_day = row.get('hour_of_day', None)
+                if hour_of_day is not None:
+                    hour_of_day = int(hour_of_day)
+                
+                time_category = str(row.get('time_category', '')) if not pd.isna(row.get('time_category')) else None
                 
                 # Skip rows with missing essential data
                 if not username or not source_ip:
@@ -262,15 +214,17 @@ def load_vpn_data_to_db(df):
                 # Insert the record - explicitly convert all values to appropriate types
                 cursor.execute('''
                 INSERT INTO vpn_logs 
-                (timestamp, username, source_ip, department, vpn_gateway, session_id)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (timestamp, username, source_ip, department, vpn_gateway, session_id, hour_of_day, time_category)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     timestamp,
                     username, 
                     source_ip, 
                     department, 
                     vpn_gateway, 
-                    session_id
+                    session_id,
+                    hour_of_day,
+                    time_category
                 ))
                 count += 1
                 
@@ -349,71 +303,66 @@ def vpn_stats():
         cursor.execute('SELECT COUNT(DISTINCT source_ip) FROM vpn_logs')
         unique_ips = cursor.fetchone()[0]
         
-        # Get connections by department - handle NULL more explicitly
+        # Get connections by department
         cursor.execute('''
         SELECT 
-            CASE WHEN department IS NULL OR RTRIM(LTRIM(department)) = '' 
-                 THEN 'Unknown' 
-                 ELSE department 
-            END as dept, 
+            department,
             COUNT(*) as count 
         FROM vpn_logs 
-        GROUP BY 
-            CASE WHEN department IS NULL OR RTRIM(LTRIM(department)) = '' 
-                 THEN 'Unknown' 
-                 ELSE department 
-            END
+        GROUP BY department
         ORDER BY count DESC
         ''')
         
         departments = {}
         for row in cursor.fetchall():
-            departments[row[0]] = row[1]
+            dept_name = row[0] if row[0] else 'Unknown'
+            departments[dept_name] = row[1]
         
         # Get connections by VPN gateway
         cursor.execute('''
         SELECT 
-            CASE WHEN vpn_gateway IS NULL OR RTRIM(LTRIM(vpn_gateway)) = '' 
-                 THEN 'Unknown' 
-                 ELSE vpn_gateway 
-            END as gateway, 
+            vpn_gateway,
             COUNT(*) as count 
         FROM vpn_logs 
-        GROUP BY 
-            CASE WHEN vpn_gateway IS NULL OR RTRIM(LTRIM(vpn_gateway)) = '' 
-                 THEN 'Unknown' 
-                 ELSE vpn_gateway 
-            END
+        GROUP BY vpn_gateway
         ORDER BY count DESC
         ''')
         
         gateways = {}
         for row in cursor.fetchall():
-            gateways[row[0]] = row[1]
+            gateway_name = row[0] if row[0] else 'Unknown'
+            gateways[gateway_name] = row[1]
         
-        # Get connections by hour - safely handle NULL timestamps
-        # Fixed query to not use 'hour' as a column name
+        # Get connections by time category (new analysis based on notebook)
         cursor.execute('''
         SELECT 
-            CASE WHEN timestamp IS NULL 
-                 THEN 'Unknown' 
-                 ELSE CAST(DATEPART(hour, timestamp) AS VARCHAR) 
-            END as hour_of_day, 
+            time_category, 
             COUNT(*) as count 
         FROM vpn_logs 
-        GROUP BY 
-            CASE WHEN timestamp IS NULL 
-                 THEN 'Unknown' 
-                 ELSE CAST(DATEPART(hour, timestamp) AS VARCHAR) 
-            END
-        ORDER BY 
-            CASE WHEN hour_of_day = 'Unknown' THEN 1 ELSE 0 END,
-            hour_of_day
+        WHERE time_category IS NOT NULL
+        GROUP BY time_category
+        ORDER BY count DESC
+        ''')
+        
+        time_categories = {}
+        for row in cursor.fetchall():
+            category = row[0] if row[0] else 'Unknown'
+            time_categories[category] = row[1]
+        
+        # Get connections by hour - extract hour from timestamp
+        cursor.execute('''
+        SELECT 
+            hour_of_day, 
+            COUNT(*) as count 
+        FROM vpn_logs 
+        WHERE hour_of_day IS NOT NULL
+        GROUP BY hour_of_day
+        ORDER BY hour_of_day
         ''')
         
         hourly = {}
         for row in cursor.fetchall():
-            hourly[row[0]] = row[1]
+            hourly[str(row[0])] = row[1]
         
         return jsonify({
             "total_connections": total_connections,
@@ -421,6 +370,7 @@ def vpn_stats():
             "unique_source_ips": unique_ips,
             "connections_by_department": departments,
             "connections_by_gateway": gateways,
+            "connections_by_time_category": time_categories,
             "connections_by_hour": hourly
         })
     except Exception as e:
@@ -456,9 +406,9 @@ def vpn_user_details(username):
                 "connection_count": row[1]
             })
         
-        # Get user's connection history
+        # Get user's connection history with time categories
         cursor.execute('''
-        SELECT timestamp, source_ip, vpn_gateway, department, session_id
+        SELECT timestamp, source_ip, vpn_gateway, department, session_id, time_category
         FROM vpn_logs 
         WHERE username = ? 
         ORDER BY timestamp DESC
@@ -471,8 +421,24 @@ def vpn_user_details(username):
                 "source_ip": row[1],
                 "vpn_gateway": row[2],
                 "department": row[3],
-                "session_id": row[4]
+                "session_id": row[4],
+                "time_category": row[5]
             })
+        
+        # Get time category distribution
+        cursor.execute('''
+        SELECT 
+            time_category, 
+            COUNT(*) as count 
+        FROM vpn_logs 
+        WHERE username = ? AND time_category IS NOT NULL
+        GROUP BY time_category
+        ''', (username,))
+        
+        time_categories = {}
+        for row in cursor.fetchall():
+            category = row[0] if row[0] else 'Unknown'
+            time_categories[category] = row[1]
         
         # Get location info for each IP
         for ip_entry in ips:
@@ -483,25 +449,11 @@ def vpn_user_details(username):
             "username": username,
             "connection_count": connection_count,
             "source_ips": ips,
+            "time_category_distribution": time_categories,
             "connection_history": history
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@vpn_bp.route('/location/<ip>', methods=['GET'])
-@require_api_key
-def ip_location(ip):
-    """
-    Get location information for an IP address.
-    
-    Args:
-        ip (str): IP address to look up
-        
-    Returns:
-        JSON with location information
-    """
-    location = get_ip_location(ip)
-    return jsonify(location)
 
 @vpn_bp.route('/anomalies', methods=['GET'])
 @require_api_key
@@ -524,18 +476,20 @@ def vpn_anomalies():
             WHERE timestamp IS NOT NULL
         )
         SELECT 
-            username, 
-            timestamp, 
-            source_ip, 
-            prev_ip, 
-            prev_timestamp,
-            time_diff_minutes
+            UserIpTimeDiff.username, 
+            UserIpTimeDiff.timestamp, 
+            UserIpTimeDiff.source_ip, 
+            UserIpTimeDiff.prev_ip, 
+            UserIpTimeDiff.prev_timestamp,
+            UserIpTimeDiff.time_diff_minutes,
+            vpn_logs.time_category
         FROM UserIpTimeDiff
+        LEFT JOIN vpn_logs ON UserIpTimeDiff.username = vpn_logs.username AND UserIpTimeDiff.timestamp = vpn_logs.timestamp
         WHERE 
-            prev_ip IS NOT NULL AND 
-            source_ip <> prev_ip AND 
-            time_diff_minutes < 60  -- Less than 60 minutes between different IPs
-        ORDER BY username, timestamp
+            UserIpTimeDiff.prev_ip IS NOT NULL AND 
+            UserIpTimeDiff.source_ip <> UserIpTimeDiff.prev_ip AND 
+            UserIpTimeDiff.time_diff_minutes < 60  -- Less than 60 minutes between different IPs
+        ORDER BY UserIpTimeDiff.username, UserIpTimeDiff.timestamp
         ''')
         
         rapid_ip_changes = []
@@ -547,7 +501,8 @@ def vpn_anomalies():
                 "current_ip": row[2],
                 "previous_ip": row[3],
                 "previous_timestamp": row[4].isoformat() if row[4] else None,
-                "minutes_since_previous": row[5]
+                "minutes_since_previous": row[5],
+                "time_category": row[6]
             }
             
             # Add location information for both IPs
@@ -556,18 +511,17 @@ def vpn_anomalies():
             
             rapid_ip_changes.append(entry)
         
-        # Find unusual access times - ensure time is available
-        # Fixed query to use hour_of_day instead of hour
+        # Find unusual access times - we'll use the time categories now
         cursor.execute('''
         SELECT 
             username, 
             timestamp, 
             source_ip,
-            DATEPART(hour, timestamp) as hour_of_day
+            hour_of_day,
+            time_category
         FROM vpn_logs
         WHERE 
-            timestamp IS NOT NULL AND
-            (DATEPART(hour, timestamp) < 7 OR DATEPART(hour, timestamp) > 19)  -- Outside 7am-7pm
+            time_category = 'night_(0-6)'  -- Access during night hours
         ORDER BY timestamp
         ''')
         
@@ -577,7 +531,8 @@ def vpn_anomalies():
                 "username": row[0],
                 "timestamp": row[1].isoformat() if row[1] else None,
                 "source_ip": row[2],
-                "hour": row[3]
+                "hour": row[3],
+                "time_category": row[4]
             }
             
             # Add location information
@@ -585,9 +540,46 @@ def vpn_anomalies():
             
             unusual_hours.append(entry)
         
+        # Find users with connections from unusual departments
+        cursor.execute('''
+        WITH UserDeptCounts AS (
+            SELECT 
+                username,
+                department,
+                COUNT(*) as dept_count,
+                SUM(COUNT(*)) OVER (PARTITION BY username) as total_user_connections
+            FROM vpn_logs
+            WHERE department IS NOT NULL
+            GROUP BY username, department
+        )
+        SELECT
+            username,
+            department,
+            dept_count,
+            total_user_connections,
+            CAST(dept_count AS FLOAT) / total_user_connections as dept_ratio
+        FROM UserDeptCounts
+        WHERE 
+            total_user_connections > 5 AND  -- User has sufficient history
+            dept_count = 1 AND              -- Only connected once from this department
+            CAST(dept_count AS FLOAT) / total_user_connections < 0.1  -- Represents less than 10% of connections
+        ORDER BY username, dept_ratio
+        ''')
+        
+        unusual_departments = []
+        for row in cursor.fetchall():
+            unusual_departments.append({
+                "username": row[0],
+                "unusual_department": row[1],
+                "connection_count": row[2],
+                "total_connections": row[3],
+                "percent_of_total": round(row[4] * 100, 2)
+            })
+        
         return jsonify({
             "rapid_ip_changes": rapid_ip_changes,
-            "unusual_hours": unusual_hours
+            "unusual_hours": unusual_hours,
+            "unusual_departments": unusual_departments
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

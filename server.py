@@ -35,7 +35,7 @@ def index():
     return jsonify({
         "name": "VPN Analysis API",
         "version": "2.0",
-        "description": "API for analyzing VPN usage patterns with data preprocessing",
+        "description": "API for analyzing VPN usage patterns with enhanced data preprocessing",
         "endpoints": [
             # API key management endpoints
             "/api/authenticate - Test your API key",
@@ -45,12 +45,11 @@ def index():
             "/api/key/<key> - Get/Update/Delete API key (admin only)",
             "/api/keys - List all API keys (admin only, GET)",
             
-            # VPN endpoints with external location lookup
+            # VPN endpoints with enhanced capabilities
             "/api/vpn/load - Load VPN data from CSV (admin only, POST)",
-            "/api/vpn/stats - Get VPN usage statistics",
+            "/api/vpn/stats - Get VPN usage statistics, including time categories",
             "/api/vpn/users/<username> - Get VPN usage details for a user",
-            "/api/vpn/location/<ip> - Get location for an IP address",
-            "/api/vpn/anomalies - Detect potential anomalies in VPN usage"
+            "/api/vpn/anomalies - Detect potential anomalies in VPN usage patterns"
         ]
     })
 
@@ -93,7 +92,7 @@ def init_db():
         END
         ''')
         
-        # Create vpn_logs table
+        # Create vpn_logs table with enhanced fields from updated preprocessor
         cursor.execute('''
         IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[vpn_logs]') AND type in (N'U'))
         BEGIN
@@ -104,11 +103,14 @@ def init_db():
                 [source_ip] NVARCHAR(45) NOT NULL,
                 [department] NVARCHAR(255),
                 [vpn_gateway] NVARCHAR(100),
-                [session_id] NVARCHAR(100)
+                [session_id] NVARCHAR(100),
+                [hour_of_day] INT,
+                [time_category] NVARCHAR(50)
             )
             
             CREATE INDEX [idx_vpn_username] ON [dbo].[vpn_logs] ([username])
             CREATE INDEX [idx_vpn_source_ip] ON [dbo].[vpn_logs] ([source_ip])
+            CREATE INDEX [idx_vpn_time_category] ON [dbo].[vpn_logs] ([time_category])
         END
         ''')
         
