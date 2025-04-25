@@ -1,6 +1,7 @@
 # server.py
 from flask import Flask, jsonify
 import pyodbc
+import os
 
 # Create the Flask application
 app = Flask(__name__)
@@ -37,19 +38,30 @@ def index():
         "version": "2.0",
         "description": "API for analyzing VPN usage patterns with enhanced data preprocessing",
         "endpoints": [
-            # API key management endpoints
+            "",
+            "API key management endpoints",
             "/api/authenticate - Test your API key",
             "/api/users - List all users (admin only)",
             "/api/stats - Get database statistics (admin only)",
             "/api/key/generate - Generate new API key (admin only, POST)",
             "/api/key/<key> - Get/Update/Delete API key (admin only)",
             "/api/keys - List all API keys (admin only, GET)",
+            "",
             
-            # VPN endpoints with enhanced capabilities
-            "/api/vpn/load - Load VPN data from CSV (admin only, POST)",
+            "Data management endpoints",
+            "/api/data/load - Load CSV file into database with all columns preserved (admin only, POST)",
+            "/api/data/preprocess-db - Process data using CSV file, store in processed_data_X table (admin only, POST)",
+            "/api/data/processed-tables - Get list of all processed data tables (admin only, GET)",
+            "/api/data/processed-table-data/<file_id> - Get details from a processed table (admin only, GET)",
+            "/api/data/stats - Get statistics about loaded CSV files (admin only, GET)",
+            "/api/data/raw-data/<file_id> - Get details about a specific CSV file (admin only, GET)",
+            "",
+            
+            "VPN endpoints with enhanced capabilities",
             "/api/vpn/stats - Get VPN usage statistics, including time categories",
             "/api/vpn/users/<username> - Get VPN usage details for a user",
-            "/api/vpn/anomalies - Detect potential anomalies in VPN usage patterns"
+            "/api/vpn/anomalies - Detect potential anomalies in VPN usage patterns",
+            ""
         ]
     })
 
@@ -92,25 +104,21 @@ def init_db():
         END
         ''')
         
-        # Create vpn_logs table with enhanced fields from updated preprocessor
+        # Create csv_registry table if it doesn't exist
         cursor.execute('''
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[vpn_logs]') AND type in (N'U'))
+        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[csv_registry]') AND type in (N'U'))
         BEGIN
-            CREATE TABLE [dbo].[vpn_logs] (
+            CREATE TABLE [dbo].[csv_registry] (
                 [id] INT IDENTITY(1,1) PRIMARY KEY,
-                [timestamp] DATETIME,
-                [username] NVARCHAR(255) NOT NULL,
-                [source_ip] NVARCHAR(45) NOT NULL,
-                [department] NVARCHAR(255),
-                [vpn_gateway] NVARCHAR(100),
-                [session_id] NVARCHAR(100),
-                [hour_of_day] INT,
-                [time_category] NVARCHAR(50)
+                [file_name] NVARCHAR(255) NOT NULL,
+                [file_path] NVARCHAR(1000) NOT NULL,
+                [row_count] INT NOT NULL,
+                [column_count] INT NOT NULL,
+                [loaded_at] DATETIME DEFAULT GETDATE(),
+                [is_processed] BIT DEFAULT 0
             )
             
-            CREATE INDEX [idx_vpn_username] ON [dbo].[vpn_logs] ([username])
-            CREATE INDEX [idx_vpn_source_ip] ON [dbo].[vpn_logs] ([source_ip])
-            CREATE INDEX [idx_vpn_time_category] ON [dbo].[vpn_logs] ([time_category])
+            CREATE INDEX [idx_csv_registry_is_processed] ON [dbo].[csv_registry] ([is_processed])
         END
         ''')
         
@@ -143,14 +151,19 @@ def init_app():
     # Register blueprints
     from api_keys import api_bp
     from vpn_analysis import vpn_bp
+    from data_loading import data_bp
     
     app.register_blueprint(api_bp)
     app.register_blueprint(vpn_bp)
+    app.register_blueprint(data_bp)
     
     return app
 
 # Configuration
-DATA_FILE = 'sample_data.csv'
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+
 HOST = '0.0.0.0'
 PORT = 5000
 DEBUG = True
