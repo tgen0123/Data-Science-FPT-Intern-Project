@@ -7,76 +7,372 @@ import pyodbc
 import numpy as np
 from datetime import datetime
 import os
-
-# Import preprocessing module
-from data_preprocessor import preprocess_data, clean_username, extract_department
-from data_preprocessor import deduplicate_columns, analyze_correlation, group_equal_object_columns, detect_noisy_columns
+import re
+import collections
+import traceback
 from helper import get_db, get_cursor, dict_from_row, require_api_key, is_admin
 
 # Create a Blueprint for data loading and preprocessing routes
 data_bp = Blueprint('data', __name__, url_prefix='/api/data')
 
-# ---- CSV File Management ----
-# Keep track of loaded CSV files
-csv_files = {}
+# ---- Preprocessing Functions ----
 
-# ---- Raw Data Loading Functions ----
+def deduplicate_columns(columns):
+    """Deduplicate column names for compatibility."""
+    counter = collections.Counter()
+    new_cols = []
+    seen = set()
+    for col in columns:
+        col = str(col).strip().lower()
+        col = re.sub(r'[^a-zA-Z0-9]', '_', col)
+        if not col:
+            col = 'unnamed'
+        base_col = col
+        suffix = counter[base_col]
+        while col in seen:
+            suffix += 1
+            col = f"{base_col}_{suffix}"
+        counter[base_col] += 1
+        seen.add(col)
+        new_cols.append(col)
+    return new_cols
 
-def get_unique_column_names(columns):
+def detect_noisy_columns(df):
     """
-    Convert column names to SQL-safe format and ensure uniqueness.
+    Automatically detect XML/noisy columns without hardcoding specific column names.
     
     Args:
-        columns (list): Original column names
+        df: DataFrame to analyze
+    Returns:
+        list: Detected noisy columns
+    """
+    noisy_columns = []
+
+    for col in df.columns:
+        if df[col].dtype == object:  # Only check text columns
+            # Convert to string in case we have non-string objects
+            sample_values = df[col].astype(str).dropna().head(50)
+
+            if len(sample_values) == 0:
+                continue
+
+            # Calculate metrics for this column
+            avg_length = sample_values.str.len().mean()
+
+            # Check for XML patterns (opening/closing tags or XML declarations)
+            xml_pattern = re.compile(r'<[^>]+>|<\?xml')
+            xml_matches = sum(sample_values.apply(lambda x: bool(xml_pattern.search(x))))
+            xml_ratio = xml_matches / len(sample_values) if len(sample_values) > 0 else 0
+
+            # Check for very long text
+            is_long_text = avg_length > 500
+
+            # Special character density (brackets, quotes, etc.)
+            special_char_pattern = re.compile(r'[<>{}[\]\"\'=:]')
+            special_char_density = sample_values.apply(
+                lambda x: len(special_char_pattern.findall(x)) / len(x) if len(x) > 0 else 0
+            ).mean()
+
+            # Decision to flag based on combined metrics
+            if (xml_ratio > 0.3 or              # Has XML content
+                (is_long_text and special_char_density > 0.05) or  # Long text with many special chars
+                avg_length > 1000):             # Extremely long text
+                noisy_columns.append(col)
+
+    print(f"Noisy columns: {noisy_columns}")
+    return noisy_columns
+
+def find_duplicate_columns(df):
+    """
+    Find columns with identical values using a smarter approach.
+    
+    Args:
+        df: DataFrame to analyze
         
     Returns:
-        dict: Mapping from original column names to unique SQL-safe column names
+        tuple: (list of results, list of columns to drop)
     """
-    unique_columns = set()
-    col_mapping = {}
+    # Get all columns to check
+    columns = df.columns.tolist()
     
-    for col in columns:
-        # Sanitize column name
-        original_col = col
-        clean_col = str(col).lower().replace(' ', '_').replace('-', '_').replace('.', '_')
-        
-        # Handle duplicate column names
-        base_col = clean_col
-        counter = 1
-        while clean_col in unique_columns:
-            clean_col = f"{base_col}_{counter}"
-            counter += 1
-        
-        unique_columns.add(clean_col)
-        col_mapping[original_col] = clean_col
-    
-    return col_mapping
+    if len(columns) < 2:
+        return ["Less than 2 columns found"], []
 
-def load_raw_csv_to_db(file_path):
+    # Initialize groups
+    groups = []
+    processed_columns = set()
+
+    # Process each column
+    for col1 in columns:
+        # Skip if we've already processed this column
+        if col1 in processed_columns:
+            continue
+
+        # Start a new group with this column
+        current_group = [col1]
+        processed_columns.add(col1)
+
+        # Compare with all other unprocessed columns
+        for col2 in columns:
+            if col2 in processed_columns:
+                continue
+
+            # Check if columns are equal (handling NaN values)
+            try:
+                is_equal = ((df[col1] == df[col2]) | 
+                          (pd.isna(df[col1]) & pd.isna(df[col2]))).all()
+                
+                if is_equal:
+                    current_group.append(col2)
+                    processed_columns.add(col2)
+            except:
+                # Skip comparison if types are incompatible
+                continue
+
+        # Add this group to our results
+        if len(current_group) > 1:  # Only add if we found duplicates
+            groups.append(current_group)
+
+    # Format results and decide which columns to drop
+    results = []
+    columns_to_drop = []
+    
+    for group in groups:
+        if len(group) > 1:
+            # Create a scoring system for column names
+            scores = {}
+            
+            for col in group:
+                col_lower = col.lower()
+                score = 0
+                
+                # Prefer shorter names (often cleaner/simpler)
+                score -= len(col) * 0.1
+                
+                # Prefer names without underscores or special characters
+                score -= col.count('_') * 0.5
+                score -= sum(c in '!@#$%^&*()+-={}[]|\\:;"\'<>,.?/' for c in col) * 1
+                
+                # Prefer common field names
+                common_names = ['id', 'name', 'user', 'username', 'timestamp', 'time', 
+                               'date', 'ip', 'address', 'email', 'status']
+                               
+                for name in common_names:
+                    if name == col_lower or col_lower.endswith('_' + name) or col_lower.startswith(name + '_'):
+                        score += 3
+                    elif name in col_lower:
+                        score += 1
+                
+                # Store the score
+                scores[col] = score
+            
+            # Keep the column with the highest score
+            keep_col = max(scores, key=scores.get)
+            drop_cols = [col for col in group if col != keep_col]
+            
+            columns_to_drop.extend(drop_cols)
+            results.append(f"Column '{keep_col}' equals to columns {drop_cols} - keeping '{keep_col}'")
+
+    return results, columns_to_drop
+
+def analyze_correlation(df, threshold=0.95):
     """
-    Load raw CSV data into the database without preprocessing.
-    Store all columns from the CSV.
+    Analyze correlation between numeric columns.
+    
+    Args:
+        df (DataFrame): DataFrame to analyze
+        threshold (float): Correlation threshold to report
+        
+    Returns:
+        dict: Dictionary with correlation information and columns to drop
+    """
+    try:
+        # Get only numeric columns
+        numeric_df = df.select_dtypes(include=['number'])
+        
+        if numeric_df.shape[1] < 2:
+            return {"error": "Not enough numeric columns for correlation analysis"}
+            
+        # Calculate correlation matrix
+        corr_matrix = numeric_df.corr()
+        
+        # Find highly correlated pairs
+        high_corr_pairs = []
+        
+        for i in range(len(corr_matrix.columns)):
+            for j in range(i):
+                if abs(corr_matrix.iloc[i, j]) >= threshold:
+                    col1 = corr_matrix.columns[i]
+                    col2 = corr_matrix.columns[j]
+                    high_corr_pairs.append({
+                        "column1": col1,
+                        "column2": col2,
+                        "correlation": corr_matrix.iloc[i, j]
+                    })
+        
+        # Group highly correlated columns together
+        correlated_groups = []
+        
+        # Start with all columns in separate groups
+        remaining_cols = set(numeric_df.columns)
+        
+        while remaining_cols:
+            # Start a new group with one column
+            current_col = next(iter(remaining_cols))
+            current_group = {current_col}
+            remaining_cols.remove(current_col)
+            
+            # Flag to track if we found new connections
+            expanded = True
+            
+            # Keep expanding the group as long as we find new connections
+            while expanded:
+                expanded = False
+                
+                # Find all columns correlated with any column in the current group
+                for pair in high_corr_pairs:
+                    col1, col2 = pair["column1"], pair["column2"]
+                    
+                    # If exactly one column is in current_group and one is in remaining_cols,
+                    # add the one from remaining_cols to current_group
+                    if col1 in current_group and col2 in remaining_cols:
+                        current_group.add(col2)
+                        remaining_cols.remove(col2)
+                        expanded = True
+                    elif col2 in current_group and col1 in remaining_cols:
+                        current_group.add(col1)
+                        remaining_cols.remove(col1)
+                        expanded = True
+            
+            # Add the complete group to our list
+            if len(current_group) > 1:  # Only add groups with at least 2 columns
+                correlated_groups.append(current_group)
+        
+        # Determine which columns to drop from each group
+        columns_to_drop = []
+        
+        for group in correlated_groups:
+            # Convert group from set to list for consistent ordering
+            group_list = list(group)
+            
+            # Keep the first column, drop the rest
+            # This is arbitrary but consistent
+            columns_to_drop.extend(group_list[1:])
+        
+        return {
+            "numeric_columns": numeric_df.columns.tolist(),
+            "high_correlation_pairs": high_corr_pairs,
+            "correlated_groups": [list(group) for group in correlated_groups],
+            "columns_to_drop": columns_to_drop
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+def preprocess_data(file_path):
+    """
+    Preprocess data using the approach from the notebook.
     
     Args:
         file_path (str): Path to the CSV file
         
     Returns:
-        tuple: (success, message, count)
+        DataFrame: Cleaned and preprocessed DataFrame
     """
     try:
-        # Read the CSV file
-        df = pd.read_csv(file_path)
-        print(f"Loaded CSV with {len(df)} rows and {len(df.columns)} columns")
+        # Load original dataset
+        df_original = pd.read_csv(file_path)
+        df = df_original.copy()
         
-        # Store the file path for later processing
-        file_name = file_path.split('/')[-1]
-        csv_files[file_name] = file_path
+        print(f"Original dataset shape: {df.shape}")
         
+        # Step 1: Deduplicate column names
+        df.columns = deduplicate_columns(df.columns)
+        print(f"Deduplicated columns: {list(df.columns)}")
+        
+        # Step 2: Drop columns with no variance
+        dup_cols = [col for col in df.columns if df[col].nunique(dropna=False) == 1]
+        if dup_cols:
+            df = df.drop(columns=dup_cols)
+            print(f"Dropped {len(dup_cols)} columns with no variance")
+            print(f"Columns dropped due to no variance: {dup_cols}")
+        
+        # Step 3: Use analyze_correlation to identify and drop highly correlated columns
+        correlation_info = analyze_correlation(df, threshold=0.95)
+        
+        if "columns_to_drop" in correlation_info and correlation_info["columns_to_drop"]:
+            columns_to_drop = correlation_info["columns_to_drop"]
+            df = df.drop(columns=columns_to_drop, errors='ignore')
+            print(f"Dropped {len(columns_to_drop)} highly correlated columns")
+            print(f"Columns dropped due to high correlation: {columns_to_drop}")
+            
+            # Print the correlation pairs for reference
+            print("High correlation pairs:")
+            for pair in correlation_info.get("high_correlation_pairs", []):
+                print(f" - {pair['column1']} & {pair['column2']}: {pair['correlation']:.2f}")
+            
+            # Print the correlated groups for reference
+            print("Correlated groups:")
+            for i, group in enumerate(correlation_info.get("correlated_groups", [])):
+                print(f" - Group {i+1}: {group} - kept {group[0]}")
+        
+        # Step 4: Find and drop duplicate columns automatically
+        equality_results, duplicate_columns_to_drop = find_duplicate_columns(df)
+        
+        # Print the equality analysis results
+        for result in equality_results:
+            print(result)
+        
+        # Drop the identified duplicate columns
+        if duplicate_columns_to_drop:
+            df = df.drop(columns=duplicate_columns_to_drop, errors='ignore')
+            print(f"Dropped {len(duplicate_columns_to_drop)} duplicate columns")
+            print(f"Columns dropped due to duplication: {duplicate_columns_to_drop}")
+        
+        # Step 5: Drop noisy columns
+        noisy_cols = detect_noisy_columns(df)
+        if noisy_cols:
+            df = df.drop(columns=noisy_cols)
+            print(f"Dropped {len(noisy_cols)} noisy columns")
+            print(f"Columns dropped due to noisy content: {noisy_cols}")
+        
+        # Step 6: Check for missing values
+        missing_values = df.isnull().sum()
+        print("Missing values in remaining columns:")
+        print(missing_values[missing_values > 0])
+        
+        # Step 7: Check for duplicates
+        duplicates = df.duplicated().sum()
+        print(f"Number of duplicate rows: {duplicates}")
+        
+        print(f"Final preprocessed dataset shape: {df.shape}")
+        print(f"Final columns: {list(df.columns)}")
+        return df
+        
+    except Exception as e:
+        print(f"Error preprocessing data: {e}")
+        traceback.print_exc()
+        return None
+
+# ---- Data Loading and Saving Functions ----
+
+def register_csv_file(file_path, row_count, column_count):
+    """
+    Register a CSV file in the database registry.
+    
+    Args:
+        file_path (str): Path to the CSV file
+        row_count (int): Number of rows in the CSV
+        column_count (int): Number of columns in the CSV
+        
+    Returns:
+        int: File ID in the database registry
+    """
+    try:
         db = get_db()
         cursor = db.cursor()
         
         # Create csv_registry table if it doesn't exist
-        # This table will store information about loaded CSV files
         cursor.execute('''
         IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[csv_registry]') AND type in (N'U'))
         BEGIN
@@ -87,12 +383,15 @@ def load_raw_csv_to_db(file_path):
                 [row_count] INT NOT NULL,
                 [column_count] INT NOT NULL,
                 [loaded_at] DATETIME DEFAULT GETDATE(),
-                [is_processed] BIT DEFAULT 0
+                [is_processed] BIT DEFAULT 1
             )
             
             CREATE INDEX [idx_csv_registry_is_processed] ON [dbo].[csv_registry] ([is_processed])
         END
         ''')
+        
+        # Extract filename from path
+        file_name = os.path.basename(file_path)
         
         # Check if this file is already registered
         cursor.execute('SELECT id FROM csv_registry WHERE file_path = ?', (file_path,))
@@ -102,177 +401,51 @@ def load_raw_csv_to_db(file_path):
             # Update existing entry
             cursor.execute('''
             UPDATE csv_registry 
-            SET row_count = ?, column_count = ?, loaded_at = GETDATE()
+            SET row_count = ?, column_count = ?, loaded_at = GETDATE(), is_processed = 1
             WHERE file_path = ?
-            ''', (len(df), len(df.columns), file_path))
+            ''', (row_count, column_count, file_path))
             file_id = existing[0]
         else:
             # Insert new entry
             cursor.execute('''
-            INSERT INTO csv_registry (file_name, file_path, row_count, column_count)
-            VALUES (?, ?, ?, ?)
-            ''', (file_name, file_path, len(df), len(df.columns)))
+            INSERT INTO csv_registry (file_name, file_path, row_count, column_count, is_processed)
+            VALUES (?, ?, ?, ?, 1)
+            ''', (file_name, file_path, row_count, column_count))
             
             # Get the ID of the inserted file
             cursor.execute('SELECT @@IDENTITY')
             file_id = cursor.fetchone()[0]
         
-        # Define reserved column names (that we're adding ourselves)
-        reserved_columns = {'id'}
-        
-        # Get unique column names
-        unique_columns = set()
-        col_mapping = {}
-        
-        for col in df.columns:
-            # Sanitize column name
-            original_col = col
-            clean_col = str(col).lower().replace(' ', '_').replace('-', '_').replace('.', '_')
-            
-            # Handle reserved column names by prefixing them with 'csv_'
-            if clean_col in reserved_columns:
-                clean_col = f"csv_{clean_col}"
-            
-            # Handle duplicate column names
-            base_col = clean_col
-            counter = 1
-            while clean_col in unique_columns or clean_col in reserved_columns:
-                clean_col = f"{base_col}_{counter}"
-                counter += 1
-            
-            unique_columns.add(clean_col)
-            col_mapping[original_col] = clean_col
-        
-        # Create a table for this specific file's raw data
-        table_name = f"raw_data_{file_id}"
-        
-        # Create columns list for the table based on CSV columns
-        column_defs = []
-        for original_col, clean_col in col_mapping.items():
-            # Use NVARCHAR(MAX) for all columns initially
-            column_defs.append(f"[{clean_col}] NVARCHAR(MAX)")
-        
-        # Create table
-        create_table_sql = f'''
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[{table_name}]') AND type in (N'U'))
-        BEGIN
-            CREATE TABLE [dbo].[{table_name}] (
-                [id] INT IDENTITY(1,1) PRIMARY KEY,
-                {', '.join(column_defs)}
-            )
-        END
-        '''
-        cursor.execute(create_table_sql)
         db.commit()
-        
-        # Insert data in batches
-        count = 0
-        batch_size = 1000
-        
-        # Process in batches
-        for i in range(0, len(df), batch_size):
-            batch_df = df.iloc[i:i+batch_size]
-            
-            for _, row in batch_df.iterrows():
-                # Prepare column names and placeholders
-                col_names = []
-                placeholders = []
-                values = []
-                
-                for original_col, clean_col in col_mapping.items():
-                    col_names.append(f"[{clean_col}]")
-                    placeholders.append('?')
-                    values.append(str(row[original_col]) if not pd.isna(row[original_col]) else None)
-                
-                # Insert row
-                insert_sql = f'''
-                INSERT INTO [{table_name}] ({', '.join(col_names)})
-                VALUES ({', '.join(placeholders)})
-                '''
-                cursor.execute(insert_sql, values)
-                
-                count += 1
-            
-            # Commit batch
-            db.commit()
-            print(f"Inserted batch {i//batch_size + 1}/{(len(df)-1)//batch_size + 1} ({count} rows so far)")
-        
-        return True, f"Successfully loaded {count} rows from {file_path}", count
+        return file_id
     
     except Exception as e:
-        print(f"Error loading raw CSV: {e}")
-        return False, str(e), 0
+        print(f"Error registering CSV file: {e}")
+        traceback.print_exc()
+        return None
 
-# ---- Data Preprocessing Functions ----
-
-def preprocess_table_data(file_id, batch_size=1000, max_rows=None):
+def save_processed_data_to_db(processed_df, file_id, batch_size=1000):
     """
-    Preprocess data from a raw_data table using the data_preprocessor module.
-    Creates a table with columns based on only preprocessed data without duplicate suffixes.
+    Save preprocessed data directly to a new database table.
+    Handles any dataset structure without hardcoded column names.
     
     Args:
-        file_id (int): ID of the file in csv_registry
-        batch_size (int): Number of rows to process in a batch
-        max_rows (int): Maximum number of rows to process, None for all
+        processed_df (DataFrame): Preprocessed DataFrame
+        file_id (int): ID of the file in the database registry
+        batch_size (int): Number of rows to insert in a batch
         
     Returns:
         dict: Processing statistics
     """
     try:
-        import os
-        from data_preprocessor import preprocess_data
-        
         db = get_db()
         cursor = db.cursor()
         
-        # Check if the file exists in the registry
-        cursor.execute('''
-        SELECT file_name, file_path, row_count
-        FROM csv_registry
-        WHERE id = ?
-        ''', (file_id,))
-        
-        file_info = cursor.fetchone()
-        if not file_info:
-            return {
-                "error": f"File ID {file_id} not found in registry",
-                "processed_count": 0,
-                "skipped_count": 0,
-                "error_count": 0,
-                "total_count": 0
-            }
-        
-        file_name, file_path, total_rows = file_info
-        
-        # Check if the CSV file exists
-        if not file_path or not os.path.exists(file_path):
-            return {
-                "error": f"CSV file {file_path} not found. Please check if the file exists at the path recorded in the registry.",
-                "processed_count": 0,
-                "skipped_count": 0,
-                "error_count": 0,
-                "total_count": 0
-            }
-        
-        # Use the data_preprocessor module to preprocess the data from the CSV file
-        print(f"Preprocessing CSV file: {file_path} using data_preprocessor.py")
-        processed_df = preprocess_data(file_path)
-        
-        if processed_df is None:
-            return {
-                "error": "Failed to preprocess file using data_preprocessor.preprocess_data()",
-                "processed_count": 0,
-                "skipped_count": 0,
-                "error_count": 0,
-                "total_count": 0
-            }
-        
         # Get columns from the preprocessed DataFrame
         processed_columns = processed_df.columns.tolist()
-        print(f"Preprocessed data has {len(processed_columns)} columns: {processed_columns}")
+        print(f"Saving data with {len(processed_columns)} columns: {processed_columns}")
         
-        # Create a map of column names to their SAFE SQL names, without adding duplicate suffixes
-        # Skip column named 'id' if it exists in the preprocessed data to avoid conflict with primary key
+        # Create a map of column names to their SAFE SQL names
         column_mapping = {}
         for col in processed_columns:
             if col.lower() == 'id':
@@ -284,16 +457,19 @@ def preprocess_table_data(file_id, batch_size=1000, max_rows=None):
             column_mapping[col] = safe_col
         
         # Create the processed_data table
-        processed_table_name = f"processed_data_{file_id}"
+        table_name = f"processed_data_{file_id}"
         
         cursor.execute(f'''
-        IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[{processed_table_name}]') AND type in (N'U'))
-        DROP TABLE [dbo].[{processed_table_name}]
+        IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[{table_name}]') AND type in (N'U'))
+        DROP TABLE [dbo].[{table_name}]
         ''')
         db.commit()
         
         # Define SQL column types for the processed data
         column_definitions = ["[id] INT IDENTITY(1,1) PRIMARY KEY"]
+        
+        # Identify likely timestamp columns from column names or data types
+        timestamp_pattern = re.compile(r'time|date|timestamp|created|updated|system|_time|utc', re.IGNORECASE)
         
         for col in processed_columns:
             # Skip adding a column definition if it would conflict with primary key
@@ -303,30 +479,56 @@ def preprocess_table_data(file_id, batch_size=1000, max_rows=None):
             safe_col = column_mapping[col]
             col_type = processed_df[col].dtype
             
+            # Detect timestamp columns - either by data type or name pattern
+            is_timestamp = (col_type == 'datetime64[ns]' or 
+                           bool(timestamp_pattern.search(col)) or
+                           processed_df[col].astype(str).str.contains(r'\d{4}-\d{2}-\d{2}', regex=True).mean() > 0.5)
+            
             # Map pandas dtypes to SQL Server types
-            if col_type == 'datetime64[ns]' or col in ['timestamp', 'systemtime', '_time']:
-                sql_type = "DATETIME"
+            if is_timestamp:
+                sql_type = "NVARCHAR(50)"  # Store timestamp as string to avoid conversion issues
             elif col_type == 'float64' or col_type == 'float32':
                 sql_type = "FLOAT"
             elif col_type == 'int64' or col_type == 'int32':
-                if col == 'hour_of_day':
-                    sql_type = "TINYINT"  # 0-255, enough for hours
-                else:
-                    sql_type = "BIGINT"  # Use BIGINT to avoid overflow
+                sql_type = "BIGINT"  # Use BIGINT to avoid overflow
             elif col_type == 'bool':
                 sql_type = "BIT"
             else:
-                # For string/object types, use appropriate length
-                if col in ['source_ip', 'callingstationid']:
-                    sql_type = "NVARCHAR(45)"  # IPv6 addresses can be up to 45 chars
-                elif col in ['time_category']:
-                    sql_type = "NVARCHAR(50)"
-                elif 'username' in col or col == 'user' or col == 'name':
-                    sql_type = "NVARCHAR(255)" 
-                elif col in ['department', 'session_id', 'vpn_gateway', 'nasidentifier', 'accountsessionidentifier']:
-                    sql_type = "NVARCHAR(255)"
+                # Determine appropriate length for string columns based on actual data
+                if col_type == 'object' or col_type == 'string':
+                    # Sample non-null values to determine length
+                    sample_values = processed_df[col].dropna().astype(str).head(100)
+                    if len(sample_values) > 0:
+                        max_length = sample_values.str.len().max()
+                        
+                        # Categorize string columns by their content
+                        # IP addresses - use non-capturing groups to avoid warning
+                        ip_pattern = r'(?:\d{1,3}\.){3}\d{1,3}'
+                        
+                        if (col.lower().endswith('ip') or 
+                            'address' in col.lower() or 
+                            processed_df[col].astype(str).str.contains(ip_pattern, regex=True).mean() > 0.5):
+                            sql_type = "NVARCHAR(45)"  # IPv6 addresses can be up to 45 chars
+                        # User identifiers
+                        elif any(name in col.lower() for name in ['user', 'name', 'login', 'email', 'account']):
+                            sql_type = "NVARCHAR(255)"
+                        # Session or identifier columns
+                        elif any(name in col.lower() for name in ['id', 'session', 'identifier', 'token', 'key']):
+                            sql_type = "NVARCHAR(255)"
+                        # Short text columns
+                        elif max_length < 50:
+                            sql_type = f"NVARCHAR({max(max_length * 2, 50)})"
+                        # Medium text columns
+                        elif max_length < 255:
+                            sql_type = "NVARCHAR(255)"
+                        # Large text columns
+                        else:
+                            sql_type = "NVARCHAR(MAX)"
+                    else:
+                        # Default for empty columns
+                        sql_type = "NVARCHAR(255)"
                 else:
-                    # For other text columns or unknown types
+                    # Unknown data type
                     sql_type = "NVARCHAR(MAX)"
             
             # Note: We don't add NOT NULL constraint to avoid insertion errors
@@ -341,22 +543,12 @@ def preprocess_table_data(file_id, batch_size=1000, max_rows=None):
         
         # Create the table
         create_table_sql = f'''
-        CREATE TABLE [dbo].[{processed_table_name}] (
+        CREATE TABLE [dbo].[{table_name}] (
             {', '.join(column_definitions)}
         )
         '''
         
         cursor.execute(create_table_sql)
-        
-        # Create indexes on key columns
-        for idx_col in ['username', 'subjectusername', 'source_ip', 'callingstationid', 'time_category']:
-            if idx_col in processed_columns:
-                safe_col = column_mapping[idx_col]
-                cursor.execute(f'''
-                CREATE INDEX [idx_{processed_table_name}_{safe_col}] 
-                ON [dbo].[{processed_table_name}] ([{safe_col}])
-                ''')
-        
         db.commit()
         
         # Insert data into processed table
@@ -366,10 +558,9 @@ def preprocess_table_data(file_id, batch_size=1000, max_rows=None):
         
         # Process in batches
         total_rows = len(processed_df)
-        rows_to_process = min(total_rows, max_rows) if max_rows else total_rows
         
-        for i in range(0, rows_to_process, batch_size):
-            end_idx = min(i + batch_size, rows_to_process)
+        for i in range(0, total_rows, batch_size):
+            end_idx = min(i + batch_size, total_rows)
             batch = processed_df.iloc[i:end_idx]
             
             for _, row in batch.iterrows():
@@ -392,44 +583,32 @@ def preprocess_table_data(file_id, batch_size=1000, max_rows=None):
                             # Convert value to appropriate type for SQL
                             value = row[col]
                             
-                            # Handle special cases
-                            if col == 'timestamp' and isinstance(value, str):
-                                value = value.replace('+07:00', '')
+                            # Handle timestamp-like columns - convert to string if needed
+                            is_timestamp = (hasattr(value, 'strftime') or 
+                                           (isinstance(value, str) and re.search(r'\d{4}-\d{2}-\d{2}', value)))
+                            
+                            if is_timestamp and not isinstance(value, str):
                                 try:
-                                    value = pd.to_datetime(value)
-                                except:
-                                    value = None
-                            elif col == 'hour_of_day':
-                                try:
-                                    hour_float = float(value)
-                                    if hour_float.is_integer() and 0 <= hour_float <= 23:
-                                        value = int(hour_float)
+                                    # Convert to string if it's a datetime object
+                                    if hasattr(value, 'strftime'):
+                                        value = value.strftime('%Y-%m-%d %H:%M:%S')
                                     else:
-                                        value = None
+                                        value = str(value)
                                 except:
-                                    value = None
+                                    value = str(value)
                             
                             # Add value and placeholder
                             valid_values.append(value)
                             valid_placeholders.append('?')
                     
-                    # Check if we have enough data to insert
-                    if 'subjectusername' in processed_columns and 'callingstationid' in processed_columns:
-                        username_idx = processed_columns.index('subjectusername')
-                        ip_idx = processed_columns.index('callingstationid')
-                        
-                        if pd.isna(row[processed_columns[username_idx]]) or pd.isna(row[processed_columns[ip_idx]]):
-                            skipped_count += 1
-                            continue
-                    
-                    # Only insert if we have data
+                    # Only insert if we have valid column data
                     if valid_columns:
                         # Insert into processed_data table
                         column_str = ', '.join([f"[{col}]" for col in valid_columns])
                         placeholder_str = ', '.join(valid_placeholders)
                         
                         insert_sql = f'''
-                        INSERT INTO [{processed_table_name}]
+                        INSERT INTO [{table_name}]
                         ({column_str})
                         VALUES ({placeholder_str})
                         '''
@@ -445,27 +624,18 @@ def preprocess_table_data(file_id, batch_size=1000, max_rows=None):
             
             # Commit batch
             db.commit()
-            print(f"Processed batch {i//batch_size + 1}/{(rows_to_process-1)//batch_size + 1} ({processed_count} rows processed so far)")
-        
-        # Update csv_registry to mark file as processed
-        cursor.execute('''
-        UPDATE csv_registry
-        SET is_processed = 1
-        WHERE id = ?
-        ''', (file_id,))
-        db.commit()
+            print(f"Processed batch {i//batch_size + 1}/{(total_rows-1)//batch_size + 1} ({processed_count} rows processed so far)")
         
         return {
             "processed_count": processed_count,
             "skipped_count": skipped_count,
             "error_count": error_count,
             "total_count": processed_count + skipped_count + error_count,
-            "processed_table": processed_table_name
+            "processed_table": table_name
         }
         
     except Exception as e:
-        print(f"Error preprocessing table data: {e}")
-        import traceback
+        print(f"Error saving processed data to DB: {e}")
         traceback.print_exc()
         return {
             "error": str(e),
@@ -475,13 +645,88 @@ def preprocess_table_data(file_id, batch_size=1000, max_rows=None):
             "total_count": 0
         }
 
-# ---- API Endpoints ----
-
+def process_and_load_csv(file_path, batch_size=1000, max_rows=None):
+    """
+    Process a CSV file and load it directly into a processed table.
+    
+    Args:
+        file_path (str): Path to the CSV file
+        batch_size (int): Number of rows to process in a batch
+        max_rows (int): Maximum number of rows to process, None for all
+        
+    Returns:
+        dict: Processing statistics
+    """
+    try:
+        # Check if the CSV file exists
+        if not os.path.exists(file_path):
+            return {
+                "error": f"CSV file {file_path} not found. Please check if the file exists.",
+                "processed_count": 0,
+                "skipped_count": 0,
+                "error_count": 0,
+                "total_count": 0
+            }
+        
+        # Use the preprocess_data function to preprocess the data from the CSV file
+        print(f"Preprocessing CSV file: {file_path}")
+        processed_df = preprocess_data(file_path)
+        
+        if processed_df is None:
+            return {
+                "error": "Failed to preprocess file",
+                "processed_count": 0,
+                "skipped_count": 0,
+                "error_count": 0,
+                "total_count": 0
+            }
+        
+        # Apply max_rows limit if specified
+        if max_rows is not None and max_rows > 0:
+            processed_df = processed_df.head(max_rows)
+            print(f"Limited to {max_rows} rows as requested")
+        
+        # Register the CSV file in the database
+        file_id = register_csv_file(
+            file_path, 
+            len(processed_df), 
+            len(processed_df.columns)
+        )
+        
+        if file_id is None:
+            return {
+                "error": "Failed to register CSV file in the database",
+                "processed_count": 0,
+                "skipped_count": 0,
+                "error_count": 0,
+                "total_count": 0
+            }
+        
+        # Save the processed data to the database
+        result = save_processed_data_to_db(processed_df, file_id, batch_size)
+        
+        # Add file_id to the result
+        result["file_id"] = file_id
+        
+        return result
+        
+    except Exception as e:
+        print(f"Error processing and loading CSV: {e}")
+        traceback.print_exc()
+        return {
+            "error": str(e),
+            "processed_count": 0,
+            "skipped_count": 0,
+            "error_count": 0,
+            "total_count": 0
+        }
+    
+# Load and process a CSV file
 @data_bp.route('/load', methods=['POST'])
 @require_api_key
-def load_raw_data_endpoint():
+def load_data_endpoint():
     """
-    Load raw VPN data from a CSV file into the database without preprocessing.
+    Load and process a CSV file, then save directly to the database.
     
     Requires an admin API key.
     """
@@ -490,20 +735,36 @@ def load_raw_data_endpoint():
     
     # Try to get file_path from different request formats
     file_path = None
+    batch_size = 1000
+    max_rows = None
     
     # Check if JSON data
     if request.is_json:
         data = request.get_json()
-        if data and 'file_path' in data:
-            file_path = data['file_path']
+        if data:
+            if 'file_path' in data:
+                file_path = data['file_path']
+            if 'batch_size' in data:
+                batch_size = data['batch_size']
+            if 'max_rows' in data:
+                max_rows = data['max_rows']
     
     # Check form data if file_path not found
-    if file_path is None and request.form and 'file_path' in request.form:
-        file_path = request.form['file_path']
+    if file_path is None and request.form:
+        if 'file_path' in request.form:
+            file_path = request.form['file_path']
+        if 'batch_size' in request.form:
+            batch_size = int(request.form['batch_size'])
+        if 'max_rows' in request.form:
+            max_rows = int(request.form['max_rows'])
     
     # Check query params if still not found
     if file_path is None and 'file_path' in request.args:
         file_path = request.args.get('file_path')
+        if 'batch_size' in request.args:
+            batch_size = int(request.args.get('batch_size'))
+        if 'max_rows' in request.args:
+            max_rows = int(request.args.get('max_rows'))
     
     # If still not found, return error
     if file_path is None:
@@ -513,77 +774,8 @@ def load_raw_data_endpoint():
         }), 400
         
     try:
-        success, message, count = load_raw_csv_to_db(file_path)
-        
-        if success:
-            return jsonify({
-                "success": True,
-                "raw_records_loaded": count,
-                "message": message
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "error": message
-            }), 500
-            
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@data_bp.route('/preprocess-db', methods=['POST'])
-@require_api_key
-def preprocess_db_data_endpoint():
-    """
-    Process data from the database raw_data table and load results into a separate processed_data table.
-    Each file gets its own processed_data_{file_id} table.
-    
-    Requires an admin API key.
-    """
-    if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-    
-    # Try to get file_id from different request formats
-    file_id = None
-    batch_size = 1000
-    max_rows = None
-    
-    # Check if JSON data
-    if request.is_json:
-        data = request.get_json()
-        if data:
-            if 'file_id' in data:
-                file_id = data['file_id']
-            if 'batch_size' in data:
-                batch_size = data['batch_size']
-            if 'max_rows' in data:
-                max_rows = data['max_rows']
-    
-    # Check form data if file_id not found
-    if file_id is None and request.form:
-        if 'file_id' in request.form:
-            file_id = int(request.form['file_id'])
-        if 'batch_size' in request.form:
-            batch_size = int(request.form['batch_size'])
-        if 'max_rows' in request.form:
-            max_rows = int(request.form['max_rows'])
-    
-    # Check query params if still not found
-    if file_id is None and 'file_id' in request.args:
-        file_id = int(request.args.get('file_id'))
-        if 'batch_size' in request.args:
-            batch_size = int(request.args.get('batch_size'))
-        if 'max_rows' in request.args:
-            max_rows = int(request.args.get('max_rows'))
-    
-    # If still not found, return error
-    if file_id is None:
-        return jsonify({
-            "error": "file_id required in request body, form data, or query parameters",
-            "help": "Set Content-Type to application/json and provide {'file_id': 1} in the request body"
-        }), 400
-    
-    try:
-        result = preprocess_table_data(file_id, batch_size, max_rows)
+        # Process and load the CSV file directly
+        result = process_and_load_csv(file_path, batch_size, max_rows)
         
         if "error" in result:
             return jsonify({
@@ -599,19 +791,171 @@ def preprocess_db_data_endpoint():
         else:
             return jsonify({
                 "success": True,
-                "message": f"Successfully processed {result['processed_count']} records into {result.get('processed_table', 'processed_data_' + str(file_id))}",
+                "message": f"Successfully processed {result['processed_count']} records into {result.get('processed_table', 'processed_data_' + str(result.get('file_id', 0)))}",
                 "stats": {
                     "processed": result["processed_count"],
                     "skipped": result["skipped_count"],
                     "errors": result["error_count"],
                     "total": result["total_count"]
                 },
-                "processed_table": result.get('processed_table', 'processed_data_' + str(file_id))
+                "file_id": result.get("file_id"),
+                "processed_table": result.get('processed_table')
             })
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Get file details
+@data_bp.route('/file-details/<int:file_id>', methods=['GET'])
+@require_api_key
+def get_file_details(file_id):
+    """Get details about a specific CSV file."""
+    if not is_admin(request.api_user):
+        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
+    
+    try:
+        cursor = get_cursor()
+        
+        # Get file info
+        cursor.execute('''
+        SELECT id, file_name, file_path, row_count, column_count, loaded_at, is_processed
+        FROM csv_registry
+        WHERE id = ?
+        ''', (file_id,))
+        
+        file_info = cursor.fetchone()
+        
+        if not file_info:
+            return jsonify({"error": "File not found"}), 404
+        
+        # Get processed table name for this file
+        processed_table_name = f"processed_data_{file_id}"
+        
+        # Check if processed table exists
+        cursor.execute(f'''
+        SELECT COUNT(*)
+        FROM information_schema.tables
+        WHERE table_name = '{processed_table_name}'
+        ''')
+        
+        processed_table_exists = cursor.fetchone()[0] > 0
+        
+        # Get processed record count if table exists
+        if processed_table_exists:
+            cursor.execute(f"SELECT COUNT(*) FROM [{processed_table_name}]")
+            processed_count = cursor.fetchone()[0]
+        else:
+            processed_count = 0
+        
+        # We don't store raw data anymore, so just get the original CSV columns
+        try:
+            # Try to read the first few rows to get column names
+            df_sample = pd.read_csv(file_info[2], nrows=5)
+            raw_columns = df_sample.columns.tolist()
+            
+            # Sample rows from the original CSV
+            raw_sample_rows = df_sample.head(5).to_dict('records')
+        except Exception as e:
+            print(f"Error reading CSV file for preview: {e}")
+            raw_columns = []
+            raw_sample_rows = []
+        
+        return jsonify({
+            "file_id": file_info[0],
+            "file_name": file_info[1],
+            "file_path": file_info[2],
+            "row_count": file_info[3],
+            "column_count": file_info[4],
+            "loaded_at": file_info[5].isoformat() if file_info[5] else None,
+            "is_processed": bool(file_info[6]),
+            "csv_file": file_info[2],
+            "raw_columns": raw_columns,
+            "raw_sample": raw_sample_rows,
+            "processed_table": processed_table_name if processed_table_exists else None,
+            "processed_count": processed_count
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Get processed table data
+@data_bp.route('/processed-table-data/<int:file_id>', methods=['GET'])
+@require_api_key
+def get_processed_sample(file_id):
+    """Get all data from a processed table."""
+    if not is_admin(request.api_user):
+        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
+    
+    try:
+        cursor = get_cursor()
+        
+        # Get table name for the processed data
+        processed_table_name = f"processed_data_{file_id}"
+        
+        # Check if table exists
+        cursor.execute(f'''
+        SELECT COUNT(*)
+        FROM information_schema.tables
+        WHERE table_name = '{processed_table_name}'
+        ''')
+        
+        if cursor.fetchone()[0] == 0:
+            return jsonify({"error": f"Processed table for file ID {file_id} not found"}), 404
+        
+        # Get column names
+        cursor.execute(f'''
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = '{processed_table_name}'
+        ORDER BY ORDINAL_POSITION
+        ''')
+        
+        columns = [row[0] for row in cursor.fetchall()]
+        
+        # Get sample data (limit to 50 rows or use limit param)
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        cursor.execute(f'''
+        SELECT *
+        FROM [{processed_table_name}]
+        ORDER BY id
+        OFFSET {offset} ROWS
+        FETCH NEXT {limit} ROWS ONLY
+        ''')
+        
+        rows = cursor.fetchall()
+        
+        # Convert to list of dictionaries
+        all_data = []
+        for row in rows:
+            row_dict = {}
+            for i, col in enumerate(columns):
+                # Handle datetime conversion
+                if isinstance(row[i], datetime):
+                    row_dict[col] = row[i].isoformat()
+                else:
+                    row_dict[col] = row[i]
+            all_data.append(row_dict)
+        
+        # Get total record count
+        cursor.execute(f"SELECT COUNT(*) FROM [{processed_table_name}]")
+        total_records = cursor.fetchone()[0]
+        
+        return jsonify({
+            "file_id": file_id,
+            "table_name": processed_table_name,
+            "columns": columns,
+            "data": all_data,
+            "total_records": total_records,
+            "limit": limit,
+            "offset": offset
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Get stats about loaded files
 @data_bp.route('/stats', methods=['GET'])
 @require_api_key
 def csv_file_stats():
@@ -673,223 +1017,6 @@ def csv_file_stats():
             "files": files,
             "processed_tables": processed_tables,
             "processed_tables_count": len(processed_tables)
-        })
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@data_bp.route('/processed-tables', methods=['GET'])
-@require_api_key
-def get_processed_tables():
-    """Get a list of all processed data tables."""
-    if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-    
-    try:
-        cursor = get_cursor()
-        
-        # Query all tables that start with processed_data_
-        cursor.execute('''
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_name LIKE 'processed_data_%'
-        ORDER BY table_name
-        ''')
-        
-        tables = [row[0] for row in cursor.fetchall()]
-        
-        # Get record counts for each table
-        table_stats = []
-        for table in tables:
-            cursor.execute(f"SELECT COUNT(*) FROM [{table}]")
-            count = cursor.fetchone()[0]
-            
-            # Extract file_id from table name
-            file_id = int(table.replace('processed_data_', ''))
-            
-            # Get file info
-            cursor.execute('''
-            SELECT file_name, file_path
-            FROM csv_registry
-            WHERE id = ?
-            ''', (file_id,))
-            
-            file_info = cursor.fetchone()
-            if file_info:
-                file_name, file_path = file_info
-            else:
-                file_name = None
-                file_path = None
-            
-            table_stats.append({
-                "table_name": table,
-                "file_id": file_id,
-                "file_name": file_name,
-                "file_path": file_path,
-                "record_count": count
-            })
-        
-        return jsonify({
-            "processed_tables": table_stats,
-            "total_tables": len(table_stats)
-        })
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-        
-@data_bp.route('/raw-data/<int:file_id>', methods=['GET'])
-@require_api_key
-def get_file_details(file_id):
-    """Get details about a specific CSV file."""
-    if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-    
-    try:
-        cursor = get_cursor()
-        
-        # Get file info
-        cursor.execute('''
-        SELECT id, file_name, file_path, row_count, column_count, loaded_at, is_processed
-        FROM csv_registry
-        WHERE id = ?
-        ''', (file_id,))
-        
-        file_info = cursor.fetchone()
-        
-        if not file_info:
-            return jsonify({"error": "File not found"}), 404
-        
-        # Get processed table name for this file
-        processed_table_name = f"processed_data_{file_id}"
-        
-        # Check if processed table exists
-        cursor.execute(f'''
-        SELECT COUNT(*)
-        FROM information_schema.tables
-        WHERE table_name = '{processed_table_name}'
-        ''')
-        
-        processed_table_exists = cursor.fetchone()[0] > 0
-        
-        # Get processed record count if table exists
-        if processed_table_exists:
-            cursor.execute(f"SELECT COUNT(*) FROM [{processed_table_name}]")
-            processed_count = cursor.fetchone()[0]
-        else:
-            processed_count = 0
-        
-        # Get table structure for the raw data
-        raw_table_name = f"raw_data_{file_id}"
-        
-        cursor.execute(f'''
-        SELECT COLUMN_NAME
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = '{raw_table_name}'
-        ORDER BY ORDINAL_POSITION
-        ''')
-        
-        raw_columns = [row[0] for row in cursor.fetchall()]
-        
-        # Get sample rows from raw data (limit to 5)
-        raw_sample_rows = []
-        
-        if raw_columns:
-            # Skip the 'id' column
-            columns_list = ', '.join([f"[{col}]" for col in raw_columns if col != 'id'])
-            
-            cursor.execute(f'''
-            SELECT TOP 5 {columns_list}
-            FROM [{raw_table_name}]
-            ''')
-            
-            for row in cursor.fetchall():
-                sample_row = {}
-                for i, col in enumerate([c for c in raw_columns if c != 'id']):
-                    sample_row[col] = row[i]
-                raw_sample_rows.append(sample_row)
-        
-        return jsonify({
-            "file_id": file_info[0],
-            "file_name": file_info[1],
-            "file_path": file_info[2],
-            "row_count": file_info[3],
-            "column_count": file_info[4],
-            "loaded_at": file_info[5].isoformat() if file_info[5] else None,
-            "is_processed": bool(file_info[6]),
-            "raw_table": raw_table_name,
-            "raw_columns": raw_columns,
-            "raw_sample": raw_sample_rows,
-            "processed_table": processed_table_name if processed_table_exists else None,
-            "processed_count": processed_count
-        })
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@data_bp.route('/processed-table-data/<int:file_id>', methods=['GET'])
-@require_api_key
-def get_processed_sample(file_id):
-    """Get all data from a processed table."""
-    if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-    
-    try:
-        cursor = get_cursor()
-        
-        # Get table name for the processed data
-        processed_table_name = f"processed_data_{file_id}"
-        
-        # Check if table exists
-        cursor.execute(f'''
-        SELECT COUNT(*)
-        FROM information_schema.tables
-        WHERE table_name = '{processed_table_name}'
-        ''')
-        
-        if cursor.fetchone()[0] == 0:
-            return jsonify({"error": f"Processed table for file ID {file_id} not found"}), 404
-        
-        # Get column names
-        cursor.execute(f'''
-        SELECT COLUMN_NAME
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = '{processed_table_name}'
-        ORDER BY ORDINAL_POSITION
-        ''')
-        
-        columns = [row[0] for row in cursor.fetchall()]
-        
-        # Get all data
-        cursor.execute(f'''
-        SELECT *
-        FROM [{processed_table_name}]
-        ORDER BY id
-        ''')
-        
-        rows = cursor.fetchall()
-        
-        # Convert to list of dictionaries
-        all_data = []
-        for row in rows:
-            row_dict = {}
-            for i, col in enumerate(columns):
-                # Handle datetime conversion
-                if isinstance(row[i], datetime):
-                    row_dict[col] = row[i].isoformat()
-                else:
-                    row_dict[col] = row[i]
-            all_data.append(row_dict)
-        
-        # Get total record count
-        cursor.execute(f"SELECT COUNT(*) FROM [{processed_table_name}]")
-        total_records = cursor.fetchone()[0]
-        
-        return jsonify({
-            "file_id": file_id,
-            "table_name": processed_table_name,
-            "columns": columns,
-            "data": all_data,
-            "total_records": total_records
         })
         
     except Exception as e:

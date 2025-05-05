@@ -49,18 +49,11 @@ def index():
             "",
             
             "Data management endpoints",
-            "/api/data/load - Load CSV file into database with all columns preserved (admin only, POST)",
-            "/api/data/preprocess-db - Process data using CSV file, store in processed_data_X table (admin only, POST)",
-            "/api/data/processed-tables - Get list of all processed data tables (admin only, GET)",
-            "/api/data/processed-table-data/<file_id> - Get details from a processed table (admin only, GET)",
+            "/api/data/load - Load and preprocess CSV file directly into the database (admin only, POST)",
+            "/api/data/processed-table-data/<file_id> - Get data from a processed table (admin only, GET)",
             "/api/data/stats - Get statistics about loaded CSV files (admin only, GET)",
-            "/api/data/raw-data/<file_id> - Get details about a specific CSV file (admin only, GET)",
+            "/api/data/file-details/<file_id> - Get details about a specific CSV file (admin only, GET)",
             "",
-            
-            "VPN endpoints with enhanced capabilities",
-            "/api/vpn/stats - Get VPN usage statistics, including time categories",
-            "/api/vpn/users/<username> - Get VPN usage details for a user",
-            "/api/vpn/anomalies - Detect potential anomalies in VPN usage patterns",
             ""
         ]
     })
@@ -115,7 +108,7 @@ def init_db():
                 [row_count] INT NOT NULL,
                 [column_count] INT NOT NULL,
                 [loaded_at] DATETIME DEFAULT GETDATE(),
-                [is_processed] BIT DEFAULT 0
+                [is_processed] BIT DEFAULT 1
             )
             
             CREATE INDEX [idx_csv_registry_is_processed] ON [dbo].[csv_registry] ([is_processed])
@@ -150,11 +143,9 @@ def init_app():
     
     # Register blueprints
     from api_keys import api_bp
-    from vpn_analysis import vpn_bp
     from data_loading import data_bp
     
     app.register_blueprint(api_bp)
-    app.register_blueprint(vpn_bp)
     app.register_blueprint(data_bp)
     
     return app
