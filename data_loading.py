@@ -280,8 +280,29 @@ def preprocess_data(file_path):
         DataFrame: Cleaned and preprocessed DataFrame
     """
     try:
-        # Load original dataset
-        df_original = pd.read_csv(file_path)
+        # First, detect the delimiter by reading a few lines
+        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+            sample = f.read(4096)  # Read first 4KB
+        
+        # Check for common delimiters in the sample
+        delimiter = ','  # Default delimiter
+        
+        # Count occurrences of potential delimiters in the sample
+        delimiters = {',': 0, ';': 0, '\t': 0, '|': 0}
+        for d in delimiters:
+            delimiters[d] = sample.count(d)
+        
+        # Choose the most frequent delimiter
+        max_count = 0
+        for d, count in delimiters.items():
+            if count > max_count:
+                max_count = count
+                delimiter = d
+        
+        print(f"Detected delimiter: '{delimiter}'")
+        
+        # Load original dataset with the detected delimiter
+        df_original = pd.read_csv(file_path, sep=delimiter)
         df = df_original.copy()
         
         print(f"Original dataset shape: {df.shape}")
