@@ -11,6 +11,9 @@ import re
 import collections
 import traceback
 from helper import get_db, get_cursor, dict_from_row, require_api_key, is_admin
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+import math
 
 # Create a Blueprint for data loading and preprocessing routes
 data_bp = Blueprint('data', __name__, url_prefix='/api/data')
@@ -269,9 +272,98 @@ def analyze_correlation(df, threshold=0.95):
     except Exception as e:
         return {"error": str(e)}
 
+def process_chunk(chunk):
+    """Process a single chunk of data"""
+    try:
+        # Deduplicate column names
+        chunk.columns = deduplicate_columns(chunk.columns)
+        
+        # Drop columns with no variance
+        dup_cols = [col for col in chunk.columns if chunk[col].nunique(dropna=False) == 1]
+        if dup_cols:
+            chunk = chunk.drop(columns=dup_cols)
+            
+        # Analyze correlation and drop highly correlated columns
+        correlation_info = analyze_correlation(chunk, threshold=0.95)
+        if "columns_to_drop" in correlation_info and correlation_info["columns_to_drop"]:
+            chunk = chunk.drop(columns=correlation_info["columns_to_drop"], errors='ignore')
+            
+        # Find and drop duplicate columns
+        _, duplicate_columns = find_duplicate_columns(chunk)
+        if duplicate_columns:
+            chunk = chunk.drop(columns=duplicate_columns, errors='ignore')
+            
+        # Drop noisy columns
+        noisy_cols = detect_noisy_columns(chunk)
+        if noisy_cols:
+            chunk = chunk.drop(columns=noisy_cols)
+            
+        return chunk
+    except Exception as e:
+        print(f"Error processing chunk: {e}")
+        return None
+
+def process_in_parallel(file_path, chunk_size=10000, max_workers=None):
+    """
+    Process large CSV files in parallel using chunks
+    
+    Args:
+        file_path (str): Path to the CSV file
+        chunk_size (int): Number of rows per chunk
+        max_workers (int): Maximum number of parallel workers
+        
+    Returns:
+        DataFrame: Processed and combined DataFrame
+    """
+    if max_workers is None:
+        max_workers = multiprocessing.cpu_count()
+    
+    # First detect delimiter
+    with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+        sample = f.read(4096)
+    delimiter = ',' if sample.count(',') > sample.count(';') else ';'
+    
+    # Get total rows
+    total_rows = sum(1 for _ in pd.read_csv(file_path, sep=delimiter, chunksize=chunk_size))
+    print(f"Total chunks to process: {math.ceil(total_rows/chunk_size)}")
+    
+    processed_chunks = []
+    
+    try:
+        # Create a ProcessPoolExecutor for parallel processing
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            # Process chunks in parallel
+            chunk_reader = pd.read_csv(file_path, sep=delimiter, chunksize=chunk_size)
+            futures = [executor.submit(process_chunk, chunk) for chunk in chunk_reader]
+            
+            # Collect results
+            for i, future in enumerate(futures):
+                try:
+                    chunk_result = future.result()
+                    if chunk_result is not None:
+                        processed_chunks.append(chunk_result)
+                    print(f"Processed chunk {i+1}/{len(futures)}")
+                except Exception as e:
+                    print(f"Error processing chunk {i+1}: {e}")
+                    
+        if not processed_chunks:
+            return None
+            
+        # Combine all processed chunks
+        final_df = pd.concat(processed_chunks, ignore_index=True)
+        
+        # Final deduplication across all data
+        final_df = final_df.drop_duplicates()
+        
+        return final_df
+        
+    except Exception as e:
+        print(f"Error in parallel processing: {e}")
+        return None
+
 def preprocess_data(file_path):
     """
-    Preprocess data using the approach from the notebook.
+    Preprocess data using parallel processing for large files
     
     Args:
         file_path (str): Path to the CSV file
@@ -280,96 +372,111 @@ def preprocess_data(file_path):
         DataFrame: Cleaned and preprocessed DataFrame
     """
     try:
-        # First, detect the delimiter by reading a few lines
-        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-            sample = f.read(4096)  # Read first 4KB
+        # Check file size to determine processing method
+        file_size = os.path.getsize(file_path)
+        large_file_threshold = 100 * 1024 * 1024  # 100MB
         
-        # Check for common delimiters in the sample
-        delimiter = ','  # Default delimiter
-        
-        # Count occurrences of potential delimiters in the sample
-        delimiters = {',': 0, ';': 0, '\t': 0, '|': 0}
-        for d in delimiters:
-            delimiters[d] = sample.count(d)
-        
-        # Choose the most frequent delimiter
-        max_count = 0
-        for d, count in delimiters.items():
-            if count > max_count:
-                max_count = count
-                delimiter = d
-        
-        print(f"Detected delimiter: '{delimiter}'")
-        
-        # Load original dataset with the detected delimiter
-        df_original = pd.read_csv(file_path, sep=delimiter)
-        df = df_original.copy()
-        
-        print(f"Original dataset shape: {df.shape}")
-        
-        # Step 1: Deduplicate column names
-        df.columns = deduplicate_columns(df.columns)
-        print(f"Deduplicated columns: {list(df.columns)}")
-        
-        # Step 2: Drop columns with no variance
-        dup_cols = [col for col in df.columns if df[col].nunique(dropna=False) == 1]
-        if dup_cols:
-            df = df.drop(columns=dup_cols)
-            print(f"Dropped {len(dup_cols)} columns with no variance")
-            print(f"Columns dropped due to no variance: {dup_cols}")
-        
-        # Step 3: Use analyze_correlation to identify and drop highly correlated columns
-        correlation_info = analyze_correlation(df, threshold=0.95)
-        
-        if "columns_to_drop" in correlation_info and correlation_info["columns_to_drop"]:
-            columns_to_drop = correlation_info["columns_to_drop"]
-            df = df.drop(columns=columns_to_drop, errors='ignore')
-            print(f"Dropped {len(columns_to_drop)} highly correlated columns")
-            print(f"Columns dropped due to high correlation: {columns_to_drop}")
-            
-            # Print the correlation pairs for reference
-            print("High correlation pairs:")
-            for pair in correlation_info.get("high_correlation_pairs", []):
-                print(f" - {pair['column1']} & {pair['column2']}: {pair['correlation']:.2f}")
-            
-            # Print the correlated groups for reference
-            print("Correlated groups:")
-            for i, group in enumerate(correlation_info.get("correlated_groups", [])):
-                print(f" - Group {i+1}: {group} - kept {group[0]}")
-        
-        # Step 4: Find and drop duplicate columns automatically
-        equality_results, duplicate_columns_to_drop = find_duplicate_columns(df)
-        
-        # Print the equality analysis results
-        for result in equality_results:
-            print(result)
-        
-        # Drop the identified duplicate columns
-        if duplicate_columns_to_drop:
-            df = df.drop(columns=duplicate_columns_to_drop, errors='ignore')
-            print(f"Dropped {len(duplicate_columns_to_drop)} duplicate columns")
-            print(f"Columns dropped due to duplication: {duplicate_columns_to_drop}")
-        
-        # Step 5: Drop noisy columns
-        noisy_cols = detect_noisy_columns(df)
-        if noisy_cols:
-            df = df.drop(columns=noisy_cols)
-            print(f"Dropped {len(noisy_cols)} noisy columns")
-            print(f"Columns dropped due to noisy content: {noisy_cols}")
-        
-        # Step 6: Check for missing values
-        missing_values = df.isnull().sum()
-        print("Missing values in remaining columns:")
-        print(missing_values[missing_values > 0])
-        
-        # Step 7: Check for duplicates
-        duplicates = df.duplicated().sum()
-        print(f"Number of duplicate rows: {duplicates}")
-        
-        print(f"Final preprocessed dataset shape: {df.shape}")
-        print(f"Final columns: {list(df.columns)}")
-        return df
-        
+        if file_size > large_file_threshold:
+            print(f"Large file detected ({file_size/1024/1024:.2f} MB). Using parallel processing...")
+            return process_in_parallel(file_path)
+        else:
+            print(f"Small file detected ({file_size/1024/1024:.2f} MB). Processing normally...")
+            # Original processing code for small files
+            try:
+                # First, detect the delimiter by reading a few lines
+                with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                    sample = f.read(4096)  # Read first 4KB
+                
+                # Check for common delimiters in the sample
+                delimiter = ','  # Default delimiter
+                
+                # Count occurrences of potential delimiters in the sample
+                delimiters = {',': 0, ';': 0, '\t': 0, '|': 0}
+                for d in delimiters:
+                    delimiters[d] = sample.count(d)
+                
+                # Choose the most frequent delimiter
+                max_count = 0
+                for d, count in delimiters.items():
+                    if count > max_count:
+                        max_count = count
+                        delimiter = d
+                
+                print(f"Detected delimiter: '{delimiter}'")
+                
+                # Load original dataset with the detected delimiter
+                df_original = pd.read_csv(file_path, sep=delimiter)
+                df = df_original.copy()
+                
+                print(f"Original dataset shape: {df.shape}")
+                
+                # Step 1: Deduplicate column names
+                df.columns = deduplicate_columns(df.columns)
+                print(f"Deduplicated columns: {list(df.columns)}")
+                
+                # Step 2: Drop columns with no variance
+                dup_cols = [col for col in df.columns if df[col].nunique(dropna=False) == 1]
+                if dup_cols:
+                    df = df.drop(columns=dup_cols)
+                    print(f"Dropped {len(dup_cols)} columns with no variance")
+                    print(f"Columns dropped due to no variance: {dup_cols}")
+                
+                # Step 3: Use analyze_correlation to identify and drop highly correlated columns
+                correlation_info = analyze_correlation(df, threshold=0.95)
+                
+                if "columns_to_drop" in correlation_info and correlation_info["columns_to_drop"]:
+                    columns_to_drop = correlation_info["columns_to_drop"]
+                    df = df.drop(columns=columns_to_drop, errors='ignore')
+                    print(f"Dropped {len(columns_to_drop)} highly correlated columns")
+                    print(f"Columns dropped due to high correlation: {columns_to_drop}")
+                    
+                    # Print the correlation pairs for reference
+                    print("High correlation pairs:")
+                    for pair in correlation_info.get("high_correlation_pairs", []):
+                        print(f" - {pair['column1']} & {pair['column2']}: {pair['correlation']:.2f}")
+                    
+                    # Print the correlated groups for reference
+                    print("Correlated groups:")
+                    for i, group in enumerate(correlation_info.get("correlated_groups", [])):
+                        print(f" - Group {i+1}: {group} - kept {group[0]}")
+                
+                # Step 4: Find and drop duplicate columns automatically
+                equality_results, duplicate_columns_to_drop = find_duplicate_columns(df)
+                
+                # Print the equality analysis results
+                for result in equality_results:
+                    print(result)
+                
+                # Drop the identified duplicate columns
+                if duplicate_columns_to_drop:
+                    df = df.drop(columns=duplicate_columns_to_drop, errors='ignore')
+                    print(f"Dropped {len(duplicate_columns_to_drop)} duplicate columns")
+                    print(f"Columns dropped due to duplication: {duplicate_columns_to_drop}")
+                
+                # Step 5: Drop noisy columns
+                noisy_cols = detect_noisy_columns(df)
+                if noisy_cols:
+                    df = df.drop(columns=noisy_cols)
+                    print(f"Dropped {len(noisy_cols)} noisy columns")
+                    print(f"Columns dropped due to noisy content: {noisy_cols}")
+                
+                # Step 6: Check for missing values
+                missing_values = df.isnull().sum()
+                print("Missing values in remaining columns:")
+                print(missing_values[missing_values > 0])
+                
+                # Step 7: Check for duplicates
+                duplicates = df.duplicated().sum()
+                print(f"Number of duplicate rows: {duplicates}")
+                
+                print(f"Final preprocessed dataset shape: {df.shape}")
+                print(f"Final columns: {list(df.columns)}")
+                return df
+                
+            except Exception as e:
+                print(f"Error preprocessing data: {e}")
+                traceback.print_exc()
+                return None
     except Exception as e:
         print(f"Error preprocessing data: {e}")
         traceback.print_exc()
@@ -445,18 +552,141 @@ def register_csv_file(file_path, row_count, column_count):
         traceback.print_exc()
         return None
 
-def save_processed_data_to_db(processed_df, file_id, batch_size=1000):
+def bulk_insert_to_db(df, table_name, conn):
     """
-    Save preprocessed data directly to a new database table.
-    Handles any dataset structure without hardcoded column names.
+    Perform bulk insert of DataFrame to SQL Server table
+    """
+    # First get the structure of the target table
+    cursor = conn.cursor()
+    cursor.execute(f"""
+    SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_NAME = '{table_name}'
+    ORDER BY ORDINAL_POSITION
+    """)
+    target_columns = cursor.fetchall()
     
-    Args:
-        processed_df (DataFrame): Preprocessed DataFrame
-        file_id (int): ID of the file in the database registry
-        batch_size (int): Number of rows to insert in a batch
+    # Map DataFrame columns to match target table structure
+    df_processed = df.copy()
+    
+    # Format timestamp columns before creating temp table
+    time_pattern = re.compile(r'time|date|timestamp', re.IGNORECASE)
+    for col in df_processed.columns:
+        if time_pattern.search(col):
+            # Handle various timestamp formats
+            if df_processed[col].dtype == 'object':
+                # Remove quotes if present
+                df_processed[col] = df_processed[col].str.replace("'", "")
+                # Convert to datetime
+                df_processed[col] = pd.to_datetime(df_processed[col], errors='coerce')
+            # Ensure consistent timezone format
+            if df_processed[col].dtype == 'datetime64[ns]':
+                df_processed[col] = df_processed[col].dt.tz_localize(None)
+    
+    # Create temporary table structure
+    temp_table = f"#temp_{table_name}"
+    column_definitions = []
+    
+    # Skip the identity column (id) when inserting
+    target_columns = [col for col in target_columns if col[0].lower() != 'id']
+    
+    # Prepare column definitions for temp table and process data
+    for col_name, data_type, max_length in target_columns:
+        # Find corresponding DataFrame column
+        df_col = next((c for c in df.columns if c.lower().replace(' ', '_').replace('-', '_').replace('.', '_') == col_name.lower()), None)
         
-    Returns:
-        dict: Processing statistics
+        if df_col is None:
+            if col_name.lower() == 'processed_at':
+                continue
+            else:
+                raise ValueError(f"Required column {col_name} not found in DataFrame")
+        
+        # Add column definition
+        if data_type in ('float', 'real'):
+            sql_type = "FLOAT"
+        elif data_type in ('bigint', 'int'):
+            sql_type = data_type.upper()
+        elif data_type == 'bit':
+            sql_type = "BIT"
+        elif data_type in ('datetime', 'datetime2'):
+            sql_type = "DATETIME2"
+            # Additional datetime formatting if needed
+            if df_col in df_processed and df_processed[df_col].dtype == 'datetime64[ns]':
+                df_processed[df_col] = df_processed[df_col].dt.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            if max_length == -1:
+                sql_type = "NVARCHAR(MAX)"
+            else:
+                sql_type = f"NVARCHAR({max_length})"
+        
+        column_definitions.append(f"[{col_name}] {sql_type}")
+    
+    create_temp_table = f"""
+    CREATE TABLE {temp_table} (
+        {', '.join(column_definitions)}
+    )
+    """
+    cursor.execute(create_temp_table)
+    
+    # Enable fast_executemany for better performance
+    cursor.fast_executemany = True
+    
+    try:
+        # Get final list of columns (excluding id and processed_at)
+        insert_columns = [col[0] for col in target_columns if col[0].lower() not in ('id', 'processed_at')]
+        
+        # Prepare the insert statement with explicit column names
+        placeholders = ','.join(['?' for _ in insert_columns])
+        column_list = ','.join([f'[{col}]' for col in insert_columns])
+        insert_sql = f"INSERT INTO {temp_table} ({column_list}) VALUES ({placeholders})"
+        
+        # Convert DataFrame to list of tuples for bulk insert
+        rows = []
+        df_columns = [c for c in df_processed.columns if c.lower().replace(' ', '_').replace('-', '_').replace('.', '_') in [col.lower() for col in insert_columns]]
+        
+        for _, row in df_processed[df_columns].iterrows():
+            row_values = []
+            for val in row:
+                if pd.isna(val):
+                    row_values.append(None)
+                elif isinstance(val, (np.int64, np.int32)):
+                    row_values.append(int(val))
+                elif isinstance(val, (np.float64, np.float32)):
+                    row_values.append(float(val))
+                elif isinstance(val, bool):
+                    row_values.append(int(val))
+                elif isinstance(val, pd.Timestamp):
+                    row_values.append(val.strftime('%Y-%m-%d %H:%M:%S'))
+                else:
+                    row_values.append(str(val))
+            rows.append(tuple(row_values))
+        
+        # Perform bulk insert in batches
+        batch_size = 10000
+        for i in range(0, len(rows), batch_size):
+            batch = rows[i:i + batch_size]
+            cursor.executemany(insert_sql, batch)
+            conn.commit()
+            print(f"Inserted batch {i//batch_size + 1} of {(len(rows)-1)//batch_size + 1}")
+        
+        # Copy data from temp table to actual table
+        cursor.execute(f"""
+        INSERT INTO {table_name} ({column_list})
+        SELECT {column_list} FROM {temp_table}
+        """)
+        conn.commit()
+        
+    finally:
+        # Always try to drop the temporary table
+        try:
+            cursor.execute(f"DROP TABLE {temp_table}")
+            conn.commit()
+        except:
+            pass  # Ignore errors when dropping temp table
+
+def save_processed_data_to_db(processed_df, file_id, batch_size=10000):
+    """
+    Save preprocessed data directly to a new database table using bulk insert.
     """
     try:
         db = get_db()
@@ -468,190 +698,72 @@ def save_processed_data_to_db(processed_df, file_id, batch_size=1000):
         
         # Create a map of column names to their SAFE SQL names
         column_mapping = {}
+        timestamp_pattern = re.compile(r'time|date|timestamp', re.IGNORECASE)
+        
         for col in processed_columns:
-            if col.lower() == 'id':
-                # Rename to avoid conflict with primary key
-                safe_col = 'original_id'
-            else:
-                # Create a safe SQL column name
-                safe_col = col.lower().replace(' ', '_').replace('-', '_').replace('.', '_')
+            safe_col = col.lower().replace(' ', '_').replace('-', '_').replace('.', '_')
             column_mapping[col] = safe_col
         
         # Create the processed_data table
         table_name = f"processed_data_{file_id}"
         
-        cursor.execute(f'''
+        cursor.execute(f"""
         IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[{table_name}]') AND type in (N'U'))
         DROP TABLE [dbo].[{table_name}]
-        ''')
+        """)
         db.commit()
         
-        # Define SQL column types for the processed data
+        # Create table with appropriate column types
         column_definitions = ["[id] INT IDENTITY(1,1) PRIMARY KEY"]
         
-        # Identify likely timestamp columns from column names or data types
-        timestamp_pattern = re.compile(r'time|date|timestamp|created|updated|system|_time|utc', re.IGNORECASE)
-        
         for col in processed_columns:
-            # Skip adding a column definition if it would conflict with primary key
-            if col.lower() == 'id':
-                continue  # We'll handle this as 'original_id' below
-                
             safe_col = column_mapping[col]
             col_type = processed_df[col].dtype
             
-            # Detect timestamp columns - either by data type or name pattern
-            is_timestamp = (col_type == 'datetime64[ns]' or 
-                           bool(timestamp_pattern.search(col)) or
-                           processed_df[col].astype(str).str.contains(r'\d{4}-\d{2}-\d{2}', regex=True).mean() > 0.5)
-            
-            # Map pandas dtypes to SQL Server types
-            if is_timestamp:
-                sql_type = "NVARCHAR(50)"  # Store timestamp as string to avoid conversion issues
-            elif col_type == 'float64' or col_type == 'float32':
+            if col_type == 'float64' or col_type == 'float32':
                 sql_type = "FLOAT"
             elif col_type == 'int64' or col_type == 'int32':
-                sql_type = "BIGINT"  # Use BIGINT to avoid overflow
+                sql_type = "BIGINT"
             elif col_type == 'bool':
                 sql_type = "BIT"
+            elif col_type == 'datetime64[ns]':
+                sql_type = "DATETIME2"
             else:
-                # Determine appropriate length for string columns based on actual data
-                if col_type == 'object' or col_type == 'string':
-                    # Sample non-null values to determine length
-                    sample_values = processed_df[col].dropna().astype(str).head(100)
-                    if len(sample_values) > 0:
-                        max_length = sample_values.str.len().max()
-                        
-                        # Categorize string columns by their content
-                        # IP addresses - use non-capturing groups to avoid warning
-                        ip_pattern = r'(?:\d{1,3}\.){3}\d{1,3}'
-                        
-                        if (col.lower().endswith('ip') or 
-                            'address' in col.lower() or 
-                            processed_df[col].astype(str).str.contains(ip_pattern, regex=True).mean() > 0.5):
-                            sql_type = "NVARCHAR(45)"  # IPv6 addresses can be up to 45 chars
-                        # User identifiers
-                        elif any(name in col.lower() for name in ['user', 'name', 'login', 'email', 'account']):
-                            sql_type = "NVARCHAR(255)"
-                        # Session or identifier columns
-                        elif any(name in col.lower() for name in ['id', 'session', 'identifier', 'token', 'key']):
-                            sql_type = "NVARCHAR(255)"
-                        # Short text columns
-                        elif max_length < 50:
-                            sql_type = f"NVARCHAR({max(max_length * 2, 50)})"
-                        # Medium text columns
-                        elif max_length < 255:
-                            sql_type = "NVARCHAR(255)"
-                        # Large text columns
-                        else:
-                            sql_type = "NVARCHAR(MAX)"
-                    else:
-                        # Default for empty columns
+                # For string columns, determine appropriate length
+                if col_type == 'object':
+                    max_length = processed_df[col].astype(str).str.len().max()
+                    if max_length < 50:
+                        sql_type = f"NVARCHAR({max(max_length * 2, 50)})"
+                    elif max_length < 255:
                         sql_type = "NVARCHAR(255)"
+                    else:
+                        sql_type = "NVARCHAR(MAX)"
                 else:
-                    # Unknown data type
-                    sql_type = "NVARCHAR(MAX)"
+                    sql_type = "NVARCHAR(255)"
             
-            # Note: We don't add NOT NULL constraint to avoid insertion errors
             column_definitions.append(f"[{safe_col}] {sql_type}")
         
-        # Add original_id column if needed (if there was an id column in the data)
-        if 'id' in processed_columns:
-            column_definitions.append("[original_id] BIGINT")
-            
         # Add processed_at timestamp column
-        column_definitions.append("[processed_at] DATETIME DEFAULT GETDATE()")
+        column_definitions.append("[processed_at] DATETIME2 DEFAULT GETDATE()")
         
-        # Create the table
-        create_table_sql = f'''
+        create_table_sql = f"""
         CREATE TABLE [dbo].[{table_name}] (
             {', '.join(column_definitions)}
         )
-        '''
-        
+        """
         cursor.execute(create_table_sql)
         db.commit()
-        
-        # Insert data into processed table
-        processed_count = 0
-        skipped_count = 0
-        error_count = 0
-        
-        # Process in batches
-        total_rows = len(processed_df)
-        
-        for i in range(0, total_rows, batch_size):
-            end_idx = min(i + batch_size, total_rows)
-            batch = processed_df.iloc[i:end_idx]
-            
-            for _, row in batch.iterrows():
-                try:
-                    # Get only the columns with non-null values
-                    valid_columns = []
-                    valid_values = []
-                    valid_placeholders = []
-                    
-                    for col in processed_columns:
-                        if not pd.isna(row[col]):
-                            # Handle the id column specially
-                            if col.lower() == 'id':
-                                # Store as original_id instead
-                                valid_columns.append('original_id')
-                            else:
-                                safe_col = column_mapping[col]
-                                valid_columns.append(safe_col)
-                            
-                            # Convert value to appropriate type for SQL
-                            value = row[col]
-                            
-                            # Handle timestamp-like columns - convert to string if needed
-                            is_timestamp = (hasattr(value, 'strftime') or 
-                                           (isinstance(value, str) and re.search(r'\d{4}-\d{2}-\d{2}', value)))
-                            
-                            if is_timestamp and not isinstance(value, str):
-                                try:
-                                    # Convert to string if it's a datetime object
-                                    if hasattr(value, 'strftime'):
-                                        value = value.strftime('%Y-%m-%d %H:%M:%S')
-                                    else:
-                                        value = str(value)
-                                except:
-                                    value = str(value)
-                            
-                            # Add value and placeholder
-                            valid_values.append(value)
-                            valid_placeholders.append('?')
-                    
-                    # Only insert if we have valid column data
-                    if valid_columns:
-                        # Insert into processed_data table
-                        column_str = ', '.join([f"[{col}]" for col in valid_columns])
-                        placeholder_str = ', '.join(valid_placeholders)
-                        
-                        insert_sql = f'''
-                        INSERT INTO [{table_name}]
-                        ({column_str})
-                        VALUES ({placeholder_str})
-                        '''
-                        
-                        cursor.execute(insert_sql, valid_values)
-                        processed_count += 1
-                    else:
-                        skipped_count += 1
-                    
-                except Exception as e:
-                    print(f"Error processing row: {e}")
-                    error_count += 1
-            
-            # Commit batch
-            db.commit()
-            print(f"Processed batch {i//batch_size + 1}/{(total_rows-1)//batch_size + 1} ({processed_count} rows processed so far)")
-        
+
+        # Perform bulk insert
+        print("Starting bulk insert operation...")
+        bulk_insert_to_db(processed_df, table_name, db)
+        print("Bulk insert completed successfully")
+
         return {
-            "processed_count": processed_count,
-            "skipped_count": skipped_count,
-            "error_count": error_count,
-            "total_count": processed_count + skipped_count + error_count,
+            "processed_count": len(processed_df),
+            "skipped_count": 0,
+            "error_count": 0,
+            "total_count": len(processed_df),
             "processed_table": table_name
         }
         
