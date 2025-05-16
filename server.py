@@ -7,8 +7,8 @@ import os
 app = Flask(__name__)
 
 # SQL Server Configuration
-app.config['SQLSERVER_HOST'] = 'IT-ONDANGKN\\SQLEXPRESS' 
-app.config['SQLSERVER_DB'] = 'ip_location_api'             
+app.config['SQLSERVER_HOST'] = 'IT-ANNVT8\\TUONGAN0123' 
+app.config['SQLSERVER_DB'] = 'SAMPLE_PROJECT_DATA'             
 
 # Global variable for database connection
 def get_db_connection():
@@ -50,9 +50,9 @@ def index():
             
             "Data management endpoints",
             "/api/data/load - Load and preprocess CSV file directly into the database (admin only, POST)",
-            "/api/data/processed-table-data/<file_id> - Get data from a processed table (admin only, GET)",
+            "/api/data/processed-table-data/<table_name> - Get data from a processed table (admin only, GET)",
             "/api/data/stats - Get statistics about loaded CSV files (admin only, GET)",
-            "/api/data/file-details/<file_id> - Get details about a specific CSV file (admin only, GET)",
+            "/api/data/file-details/<table_name> - Get details about a specific CSV file (admin only, GET)",
             "",
             ""
         ]

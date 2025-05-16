@@ -324,7 +324,7 @@ def process_in_parallel(file_path, chunk_size=10000, max_workers=None):
     delimiter = ',' if sample.count(',') > sample.count(';') else ';'
     
     # Get total rows
-    total_rows = sum(1 for _ in pd.read_csv(file_path, sep=delimiter, chunksize=chunk_size))
+    total_rows = sum(1 for _ in pd.read_csv(file_path, sep=delimiter, chunksize=chunk_size, index_col=False))
     print(f"Total chunks to process: {math.ceil(total_rows/chunk_size)}")
     
     processed_chunks = []
@@ -333,7 +333,7 @@ def process_in_parallel(file_path, chunk_size=10000, max_workers=None):
         # Create a ProcessPoolExecutor for parallel processing
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             # Process chunks in parallel
-            chunk_reader = pd.read_csv(file_path, sep=delimiter, chunksize=chunk_size)
+            chunk_reader = pd.read_csv(file_path, sep=delimiter, chunksize=chunk_size, index_col=False)
             futures = [executor.submit(process_chunk, chunk) for chunk in chunk_reader]
             
             # Collect results
@@ -405,7 +405,7 @@ def preprocess_data(file_path):
                 print(f"Detected delimiter: '{delimiter}'")
                 
                 # Load original dataset with the detected delimiter
-                df_original = pd.read_csv(file_path, sep=delimiter)
+                df_original = pd.read_csv(file_path, sep=delimiter, index_col=False)
                 df = df_original.copy()
                 
                 print(f"Original dataset shape: {df.shape}")
@@ -569,6 +569,9 @@ def bulk_insert_to_db(df, table_name, conn):
     # Map DataFrame columns to match target table structure
     df_processed = df.copy()
     
+    # Reset index to ensure no unnamed columns
+    df_processed.reset_index(drop=True, inplace=True)
+    
     # Format timestamp columns before creating temp table
     time_pattern = re.compile(r'time|date|timestamp', re.IGNORECASE)
     for col in df_processed.columns:
@@ -684,13 +687,47 @@ def bulk_insert_to_db(df, table_name, conn):
         except:
             pass  # Ignore errors when dropping temp table
 
-def save_processed_data_to_db(processed_df, file_id, batch_size=10000):
+def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_table=None):
     """
-    Save preprocessed data directly to a new database table using bulk insert.
+    Save preprocessed data directly to a database table.
+    
+    Args:
+        processed_df: Preprocessed DataFrame
+        file_path: Original CSV file path
+        batch_size: Size of batches for bulk insert
+        target_table: Optional target table name. If provided, data will be inserted into this existing table
     """
+    import time
+    start_time = time.time()
+    processing_times = {}
+    
     try:
         db = get_db()
         cursor = db.cursor()
+        
+        if target_table:
+            # Check if target table exists
+            cursor.execute(f"""
+            SELECT COUNT(*)
+            FROM information_schema.tables
+            WHERE table_name = '{target_table}'
+            """)
+            
+            if cursor.fetchone()[0] == 0:
+                raise ValueError(f"Target table '{target_table}' does not exist")
+                
+            table_name = target_table
+            print(f"Using existing table: {table_name}")
+        else:
+            # Original logic for creating new table
+            base_filename = os.path.splitext(os.path.basename(file_path))[0]
+            table_name = re.sub(r'[^a-zA-Z0-9_]', '_', base_filename)
+            if not table_name[0].isalpha():
+                table_name = "tbl_" + table_name
+            print(f"Creating new table: {table_name}")
+        
+        # Time table creation preparation
+        table_prep_start = time.time()
         
         # Get columns from the preprocessed DataFrame
         processed_columns = processed_df.columns.tolist()
@@ -704,67 +741,98 @@ def save_processed_data_to_db(processed_df, file_id, batch_size=10000):
             safe_col = col.lower().replace(' ', '_').replace('-', '_').replace('.', '_')
             column_mapping[col] = safe_col
         
-        # Create the processed_data table
-        table_name = f"processed_data_{file_id}"
+        processing_times['table_preparation'] = time.time() - table_prep_start
         
-        cursor.execute(f"""
-        IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[{table_name}]') AND type in (N'U'))
-        DROP TABLE [dbo].[{table_name}]
-        """)
-        db.commit()
-        
-        # Create table with appropriate column types
-        column_definitions = ["[id] INT IDENTITY(1,1) PRIMARY KEY"]
-        
-        for col in processed_columns:
-            safe_col = column_mapping[col]
-            col_type = processed_df[col].dtype
+        if not target_table:
+            # Only create new table if not using existing table
+            # Time table drop if exists
+            drop_start = time.time()
+            cursor.execute(f"""
+            IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[{table_name}]') AND type in (N'U'))
+            DROP TABLE [dbo].[{table_name}]
+            """)
+            db.commit()
+            processing_times['table_drop'] = time.time() - drop_start
             
-            if col_type == 'float64' or col_type == 'float32':
-                sql_type = "FLOAT"
-            elif col_type == 'int64' or col_type == 'int32':
-                sql_type = "BIGINT"
-            elif col_type == 'bool':
-                sql_type = "BIT"
-            elif col_type == 'datetime64[ns]':
-                sql_type = "DATETIME2"
-            else:
-                # For string columns, determine appropriate length
-                if col_type == 'object':
-                    max_length = processed_df[col].astype(str).str.len().max()
-                    if max_length < 50:
-                        sql_type = f"NVARCHAR({max(max_length * 2, 50)})"
-                    elif max_length < 255:
-                        sql_type = "NVARCHAR(255)"
-                    else:
-                        sql_type = "NVARCHAR(MAX)"
+            # Time schema creation
+            schema_start = time.time()
+            # Create table with appropriate column types
+            column_definitions = ["[id] INT IDENTITY(1,1) PRIMARY KEY"]
+            
+            for col in processed_columns:
+                safe_col = column_mapping[col]
+                col_type = processed_df[col].dtype
+                
+                if col_type == 'float64' or col_type == 'float32':
+                    sql_type = "FLOAT"
+                elif col_type == 'int64' or col_type == 'int32':
+                    sql_type = "BIGINT"
+                elif col_type == 'bool':
+                    sql_type = "BIT"
+                elif col_type == 'datetime64[ns]':
+                    sql_type = "DATETIME2"
                 else:
-                    sql_type = "NVARCHAR(255)"
+                    # For string columns, determine appropriate length
+                    if col_type == 'object':
+                        max_length = processed_df[col].astype(str).str.len().max()
+                        if max_length < 50:
+                            sql_type = f"NVARCHAR({max(max_length * 2, 50)})"
+                        elif max_length < 255:
+                            sql_type = "NVARCHAR(255)"
+                        else:
+                            sql_type = "NVARCHAR(MAX)"
+                    else:
+                        sql_type = "NVARCHAR(255)"
+                
+                column_definitions.append(f"[{safe_col}] {sql_type}")
             
-            column_definitions.append(f"[{safe_col}] {sql_type}")
-        
-        # Add processed_at timestamp column
-        column_definitions.append("[processed_at] DATETIME2 DEFAULT GETDATE()")
-        
-        create_table_sql = f"""
-        CREATE TABLE [dbo].[{table_name}] (
-            {', '.join(column_definitions)}
-        )
-        """
-        cursor.execute(create_table_sql)
-        db.commit()
+            # Add processed_at timestamp column
+            column_definitions.append("[processed_at] DATETIME2 DEFAULT GETDATE()")
+            
+            create_table_sql = f"""
+            CREATE TABLE [dbo].[{table_name}] (
+                {', '.join(column_definitions)}
+            )
+            """
+            cursor.execute(create_table_sql)
+            db.commit()
+            processing_times['schema_creation'] = time.time() - schema_start
+        else:
+            processing_times['table_drop'] = 0
+            processing_times['schema_creation'] = 0
 
-        # Perform bulk insert
+        # Time bulk insert operation
+        insert_start = time.time()
         print("Starting bulk insert operation...")
         bulk_insert_to_db(processed_df, table_name, db)
-        print("Bulk insert completed successfully")
+        processing_times['bulk_insert'] = time.time() - insert_start
+        
+        # Calculate total time
+        total_time = time.time() - start_time
+        
+        # Print timing summary
+        print("\nProcessing Time Summary:")
+        print(f"{'Operation':<20} {'Time (seconds)':<15} {'Percentage':<10}")
+        print("-" * 45)
+        for operation, duration in processing_times.items():
+            percentage = (duration / total_time) * 100
+            print(f"{operation:<20} {duration:,.2f}s{percentage:>11.1f}%")
+        print("-" * 45)
+        print(f"{'Total time':<20} {total_time:,.2f}s{'100.0':>11}%\n")
 
         return {
             "processed_count": len(processed_df),
             "skipped_count": 0,
             "error_count": 0,
             "total_count": len(processed_df),
-            "processed_table": table_name
+            "processed_table": table_name,
+            "processing_times": {
+                "table_preparation": round(processing_times['table_preparation'], 2),
+                "table_drop": round(processing_times['table_drop'], 2),
+                "schema_creation": round(processing_times['schema_creation'], 2),
+                "bulk_insert": round(processing_times['bulk_insert'], 2),
+                "total_time": round(total_time, 2)
+            }
         }
         
     except Exception as e:
@@ -778,7 +846,7 @@ def save_processed_data_to_db(processed_df, file_id, batch_size=10000):
             "total_count": 0
         }
 
-def process_and_load_csv(file_path, batch_size=1000, max_rows=None):
+def process_and_load_csv(file_path, batch_size=1000, max_rows=None, target_table=None):
     """
     Process a CSV file and load it directly into a processed table.
     
@@ -786,6 +854,7 @@ def process_and_load_csv(file_path, batch_size=1000, max_rows=None):
         file_path (str): Path to the CSV file
         batch_size (int): Number of rows to process in a batch
         max_rows (int): Maximum number of rows to process, None for all
+        target_table (str): Optional target table name. If provided, data will be inserted into this existing table
         
     Returns:
         dict: Processing statistics
@@ -836,7 +905,7 @@ def process_and_load_csv(file_path, batch_size=1000, max_rows=None):
             }
         
         # Save the processed data to the database
-        result = save_processed_data_to_db(processed_df, file_id, batch_size)
+        result = save_processed_data_to_db(processed_df, file_path, batch_size, target_table)
         
         # Add file_id to the result
         result["file_id"] = file_id
@@ -864,51 +933,20 @@ def load_data_endpoint():
     Requires an admin API key.
     """
     if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-    
-    # Try to get file_path from different request formats
-    file_path = None
-    batch_size = 1000
-    max_rows = None
-    
-    # Check if JSON data
-    if request.is_json:
-        data = request.get_json()
-        if data:
-            if 'file_path' in data:
-                file_path = data['file_path']
-            if 'batch_size' in data:
-                batch_size = data['batch_size']
-            if 'max_rows' in data:
-                max_rows = data['max_rows']
-    
-    # Check form data if file_path not found
-    if file_path is None and request.form:
-        if 'file_path' in request.form:
-            file_path = request.form['file_path']
-        if 'batch_size' in request.form:
-            batch_size = int(request.form['batch_size'])
-        if 'max_rows' in request.form:
-            max_rows = int(request.form['max_rows'])
-    
-    # Check query params if still not found
-    if file_path is None and 'file_path' in request.args:
-        file_path = request.args.get('file_path')
-        if 'batch_size' in request.args:
-            batch_size = int(request.args.get('batch_size'))
-        if 'max_rows' in request.args:
-            max_rows = int(request.args.get('max_rows'))
-    
-    # If still not found, return error
-    if file_path is None:
-        return jsonify({
-            "error": "file_path required in request body, form data, or query parameters",
-            "help": "Set Content-Type to application/json and provide {'file_path': 'your/file/path.csv'} in the request body"
-        }), 400
-        
+        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403    # Parse parameters
     try:
-        # Process and load the CSV file directly
-        result = process_and_load_csv(file_path, batch_size, max_rows)
+        # Get parameters from request using helper function
+        file_path, batch_size, max_rows, target_table = parse_request_params(request)
+
+        # Validate required parameters
+        if not file_path:
+            return jsonify({
+                "error": "file_path required in request body, form data, or query parameters",
+                "help": "Set Content-Type to application/json and provide {'file_path': 'your/file/path.csv'} in the request body"
+            }), 400
+
+        # Process and load the CSV file
+        result = process_and_load_csv(file_path, batch_size, max_rows, target_table)
         
         if "error" in result:
             return jsonify({
@@ -921,110 +959,122 @@ def load_data_endpoint():
                     "total": result["total_count"]
                 }
             }), 500
-        else:
-            return jsonify({
-                "success": True,
-                "message": f"Successfully processed {result['processed_count']} records into {result.get('processed_table', 'processed_data_' + str(result.get('file_id', 0)))}",
-                "stats": {
-                    "processed": result["processed_count"],
-                    "skipped": result["skipped_count"],
-                    "errors": result["error_count"],
-                    "total": result["total_count"]
-                },
-                "file_id": result.get("file_id"),
-                "processed_table": result.get('processed_table')
-            })
             
+        return jsonify({
+            "success": True,
+            "message": f"Successfully processed {result['processed_count']} records into {result.get('processed_table')}",
+            "stats": {
+                "processed": result["processed_count"],
+                "skipped": result["skipped_count"],
+                "errors": result["error_count"],
+                "total": result["total_count"]
+            },
+            "file_id": result.get("file_id"),
+            "processed_table": result.get('processed_table'),
+            "processing_times": result.get('processing_times', {})
+        })
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # Get file details
-@data_bp.route('/file-details/<int:file_id>', methods=['GET'])
+@data_bp.route('/file-details/<string:table_name>', methods=['GET'])
 @require_api_key
-def get_file_details(file_id):
-    """Get details about a specific CSV file."""
+def get_file_details(table_name):
+    """Get details about a specific table."""
     if not is_admin(request.api_user):
         return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
     
     try:
         cursor = get_cursor()
         
-        # Get file info
-        cursor.execute('''
-        SELECT id, file_name, file_path, row_count, column_count, loaded_at, is_processed
-        FROM csv_registry
-        WHERE id = ?
-        ''', (file_id,))
-        
-        file_info = cursor.fetchone()
-        
-        if not file_info:
-            return jsonify({"error": "File not found"}), 404
-        
-        # Get processed table name for this file
-        processed_table_name = f"processed_data_{file_id}"
-        
-        # Check if processed table exists
+        # Sanitize the table name for SQL safety
+        processed_table_name = re.sub(r'[^a-zA-Z0-9_]', '_', table_name)
+        if not processed_table_name[0].isalpha():
+            processed_table_name = "tbl_" + processed_table_name
+            
+        # Check if table exists and get its details        
         cursor.execute(f'''
-        SELECT COUNT(*)
-        FROM information_schema.tables
-        WHERE table_name = '{processed_table_name}'
+        SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_NAME = '{processed_table_name}'
+        ''')
+        table_info = cursor.fetchone()
+        
+        if not table_info:
+            return jsonify({"error": "Table not found"}), 404
+            
+        # Get column information
+        cursor.execute(f'''
+        SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = '{processed_table_name}'
+        ORDER BY ORDINAL_POSITION
         ''')
         
-        processed_table_exists = cursor.fetchone()[0] > 0
-        
-        # Get processed record count if table exists
-        if processed_table_exists:
-            cursor.execute(f"SELECT COUNT(*) FROM [{processed_table_name}]")
-            processed_count = cursor.fetchone()[0]
-        else:
-            processed_count = 0
-        
-        # We don't store raw data anymore, so just get the original CSV columns
-        try:
-            # Try to read the first few rows to get column names
-            df_sample = pd.read_csv(file_info[2], nrows=5)
-            raw_columns = df_sample.columns.tolist()
+        columns = []
+        for col in cursor.fetchall():
+            column_info = {
+                "name": col[0],
+                "type": col[1],
+                "max_length": col[2]
+            }
+            columns.append(column_info)
             
-            # Sample rows from the original CSV
-            raw_sample_rows = df_sample.head(5).to_dict('records')
-        except Exception as e:
-            print(f"Error reading CSV file for preview: {e}")
-            raw_columns = []
-            raw_sample_rows = []
+        # Get row count
+        cursor.execute(f"SELECT COUNT(*) FROM [{processed_table_name}]")
+        total_rows = cursor.fetchone()[0]
+        
+        # # Get sample data (first 5 rows)
+        # cursor.execute(f'''
+        # SELECT TOP 5 *
+        # FROM [{processed_table_name}]
+        # ORDER BY id
+        # ''')
+        
+        # rows = cursor.fetchall()
+        # sample_data = []
+        # column_names = [col["name"] for col in columns]
+        
+        # for row in rows:
+        #     row_dict = {}
+        #     for i, col in enumerate(column_names):
+        #         if isinstance(row[i], datetime):
+        #             row_dict[col] = row[i].isoformat()
+        #         else:
+        #             row_dict[col] = row[i]
+        #     sample_data.append(row_dict)
         
         return jsonify({
-            "file_id": file_info[0],
-            "file_name": file_info[1],
-            "file_path": file_info[2],
-            "row_count": file_info[3],
-            "column_count": file_info[4],
-            "loaded_at": file_info[5].isoformat() if file_info[5] else None,
-            "is_processed": bool(file_info[6]),
-            "csv_file": file_info[2],
-            "raw_columns": raw_columns,
-            "raw_sample": raw_sample_rows,
-            "processed_table": processed_table_name if processed_table_exists else None,
-            "processed_count": processed_count
+            "table_name": processed_table_name,
+            "schema": table_info[0],
+            "table_type": table_info[2],
+            "total_rows": total_rows,
+            "columns": columns,
+            "column_count": len(columns),
+            # "sample_data": sample_data,
+            "description": f"Details for table {processed_table_name}"
         })
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # Get processed table data
-@data_bp.route('/processed-table-data/<int:file_id>', methods=['GET'])
+@data_bp.route('/processed-table-data/<string:table_name>', methods=['GET'])
 @require_api_key
-def get_processed_sample(file_id):
-    """Get all data from a processed table."""
+def get_processed_sample(table_name):
+    """Get all data from a processed table using table name."""
     if not is_admin(request.api_user):
         return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
     
     try:
         cursor = get_cursor()
         
-        # Get table name for the processed data
-        processed_table_name = f"processed_data_{file_id}"
-        
+        # Sanitize the table name for SQL safety
+        processed_table_name = re.sub(r'[^a-zA-Z0-9_]', '_', table_name)
+        if not processed_table_name[0].isalpha():
+            processed_table_name = "tbl_" + processed_table_name
+            
         # Check if table exists
         cursor.execute(f'''
         SELECT COUNT(*)
@@ -1033,7 +1083,7 @@ def get_processed_sample(file_id):
         ''')
         
         if cursor.fetchone()[0] == 0:
-            return jsonify({"error": f"Processed table for file ID {file_id} not found"}), 404
+            return jsonify({"error": f"Processed table for table name {table_name} not found"}), 404
         
         # Get column names
         cursor.execute(f'''
@@ -1074,15 +1124,14 @@ def get_processed_sample(file_id):
         # Get total record count
         cursor.execute(f"SELECT COUNT(*) FROM [{processed_table_name}]")
         total_records = cursor.fetchone()[0]
-        
         return jsonify({
-            "file_id": file_id,
             "table_name": processed_table_name,
             "columns": columns,
             "data": all_data,
             "total_records": total_records,
             "limit": limit,
-            "offset": offset
+            "offset": offset,
+            "description": f"Data from processed table {processed_table_name}"
         })
         
     except Exception as e:
@@ -1154,3 +1203,35 @@ def csv_file_stats():
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+def parse_request_params(request):
+    """Parse request parameters from different sources"""
+    file_path = None
+    batch_size = 1000
+    max_rows = None
+    target_table = None
+
+    # Check JSON data
+    if request.is_json:
+        data = request.get_json()
+        if data:
+            file_path = data.get('file_path')
+            batch_size = data.get('batch_size', 1000)
+            max_rows = data.get('max_rows')
+            target_table = data.get('target_table')
+    
+    # Check form data
+    if file_path is None and request.form:
+        file_path = request.form.get('file_path')
+        batch_size = int(request.form.get('batch_size', 1000))
+        max_rows = int(request.form.get('max_rows')) if 'max_rows' in request.form else None
+        target_table = request.form.get('target_table')
+    
+    # Check query parameters
+    if file_path is None and request.args:
+        file_path = request.args.get('file_path')
+        batch_size = int(request.args.get('batch_size', 1000))
+        max_rows = int(request.args.get('max_rows')) if 'max_rows' in request.args else None
+        target_table = request.args.get('target_table')
+    
+    return file_path, batch_size, max_rows, target_table
