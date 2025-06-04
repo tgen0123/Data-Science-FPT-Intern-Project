@@ -44,10 +44,12 @@ def setup_logger(name, log_file, level=logging.INFO):
 
 # Create different loggers for different components
 app_logger = setup_logger('app', 'app.log')
-db_logger = setup_logger('database', 'database.log')
+# db_logger = setup_logger('database', 'database.log')
 api_logger = setup_logger('api', 'api.log')
 data_logger = setup_logger('data', 'data.log')
 security_logger = setup_logger('security', 'security.log')
+error_logger = setup_logger('error', 'error.log', level=logging.ERROR)  # Dedicated error logger
+query_logger = setup_logger('query', 'database.log')  # Dedicated query logger
 
 def log_error(logger, error, additional_info=None):
     """Utility function to log errors with stack trace"""
@@ -55,8 +57,12 @@ def log_error(logger, error, additional_info=None):
     error_msg = f"Error: {str(error)}"
     if additional_info:
         error_msg += f" | Additional Info: {additional_info}"
+    # Log to both the component logger and the dedicated error logger
     logger.error(error_msg)
-    logger.error(f"Stack Trace: {''.join(traceback.format_tb(error.__traceback__))}")
+    error_logger.error(error_msg)
+    stack_trace = f"Stack Trace: {''.join(traceback.format_tb(error.__traceback__))}"
+    logger.error(stack_trace)
+    error_logger.error(stack_trace)
 
 def log_request(logger, request, response=None):
     """Utility function to log HTTP requests and responses"""
@@ -88,7 +94,8 @@ def log_db_query(logger, query, params=None, duration=None):
             log_entry += f" | Params: {params}"
         if duration:
             log_entry += f" | Duration: {duration:.2f}s"
+        # Log to both the component logger and the dedicated query logger
         logger.debug(log_entry)
         
     except Exception as e:
-        log_error(logger, e, "Error logging database query")
+        log_error(error_logger, e, "Error logging database query")

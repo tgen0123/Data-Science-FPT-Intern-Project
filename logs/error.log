@@ -1,0 +1,15 @@
+[2025-06-04 16:51:05] ERROR [error.save_processed_data_to_db:937] Error saving processed data to DB: Logger._log() got an unexpected keyword argument 'duration'
+[2025-06-04 16:51:05] ERROR [error.save_processed_data_to_db:939] Traceback (most recent call last):
+  File "c:\Users\Administrator\Documents\GitHub\Data-Science-FPT-Intern-Project\data_loading.py", line 898, in save_processed_data_to_db
+    bulk_insert_to_db(processed_df, table_name, db)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\Administrator\Documents\GitHub\Data-Science-FPT-Intern-Project\data_loading.py", line 714, in bulk_insert_to_db
+    data_logger.info(f"Completed bulk insert to {table_name}", duration=duration)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1522, in info
+    self._log(INFO, msg, args, **kwargs)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Logger._log() got an unexpected keyword argument 'duration'
+
+[2025-06-04 16:51:05] ERROR [error.process_and_load_csv:1024] Error saving data to database: Logger._log() got an unexpected keyword argument 'duration'
+[2025-06-04 16:51:05] ERROR [error.load_data_endpoint:1074] Failed to process CSV file: Logger._log() got an unexpected keyword argument 'duration'

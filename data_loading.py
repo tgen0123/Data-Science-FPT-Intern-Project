@@ -1,19 +1,21 @@
 # data_loading.py
-import pandas as pd
-import json
 from flask import Blueprint, jsonify, request, g, current_app
 from functools import wraps
+from datetime import datetime
+import pandas as pd
+import json
 import pyodbc
 import numpy as np
-from datetime import datetime
 import os
 import re
 import collections
 import traceback
-from helper import get_db, get_cursor, dict_from_row, require_api_key, is_admin
+import time
 import multiprocessing
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import math
+from helper import get_db, get_cursor, dict_from_row, require_api_key, is_admin
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from logger import data_logger, query_logger, error_logger, log_error, log_db_query
 
 # Create a Blueprint for data loading and preprocessing routes
 data_bp = Blueprint('data', __name__, url_prefix='/api/data')
@@ -81,8 +83,11 @@ def detect_noisy_columns(df):
                 (is_long_text and special_char_density > 0.05) or  # Long text with many special chars
                 avg_length > 1000):             # Extremely long text
                 noisy_columns.append(col)
+                data_logger.info(f"Column '{col}' detected as noisy: xml_ratio={xml_ratio:.2f}, avg_length={avg_length:.1f}, special_char_density={special_char_density:.3f}")
 
-    print(f"Noisy columns: {noisy_columns}")
+    msg = f"Noisy columns: {noisy_columns}"
+    print(msg)
+    data_logger.info(msg)
     return noisy_columns
 
 def find_duplicate_columns(df):
@@ -318,14 +323,18 @@ def process_in_parallel(file_path, chunk_size=10000, max_workers=None):
     if max_workers is None:
         max_workers = multiprocessing.cpu_count()
     
+    data_logger.info(f"Starting parallel processing with {max_workers} workers")
+    
     # First detect delimiter
     with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
         sample = f.read(4096)
     delimiter = ',' if sample.count(',') > sample.count(';') else ';'
+    data_logger.info(f"Detected delimiter: '{delimiter}'")
     
     # Get total rows
     total_rows = sum(1 for _ in pd.read_csv(file_path, sep=delimiter, chunksize=chunk_size, index_col=False))
-    print(f"Total chunks to process: {math.ceil(total_rows/chunk_size)}")
+    total_chunks = math.ceil(total_rows/chunk_size)
+    data_logger.info(f"Total chunks to process: {total_chunks} ({total_rows} rows)")
     
     processed_chunks = []
     
@@ -342,23 +351,32 @@ def process_in_parallel(file_path, chunk_size=10000, max_workers=None):
                     chunk_result = future.result()
                     if chunk_result is not None:
                         processed_chunks.append(chunk_result)
-                    print(f"Processed chunk {i+1}/{len(futures)}")
+                        data_logger.info(f"Successfully processed chunk {i+1}/{len(futures)}")
+                    else:
+                        data_logger.warning(f"Chunk {i+1}/{len(futures)} returned None")
                 except Exception as e:
-                    print(f"Error processing chunk {i+1}: {e}")
+                    error_logger.error(f"Error processing chunk {i+1}: {str(e)}")
+                    error_logger.error(traceback.format_exc())
                     
         if not processed_chunks:
+            error_logger.error("No chunks were successfully processed")
             return None
             
         # Combine all processed chunks
+        data_logger.info("Combining processed chunks...")
         final_df = pd.concat(processed_chunks, ignore_index=True)
         
         # Final deduplication across all data
+        initial_rows = len(final_df)
         final_df = final_df.drop_duplicates()
+        dropped_rows = initial_rows - len(final_df)
+        data_logger.info(f"Removed {dropped_rows} duplicate rows from final dataset")
         
         return final_df
         
     except Exception as e:
-        print(f"Error in parallel processing: {e}")
+        error_logger.error(f"Error in parallel processing: {str(e)}")
+        error_logger.error(traceback.format_exc())
         return None
 
 def preprocess_data(file_path):
@@ -377,18 +395,19 @@ def preprocess_data(file_path):
         large_file_threshold = 100 * 1024 * 1024  # 100MB
         
         if file_size > large_file_threshold:
-            print(f"Large file detected ({file_size/1024/1024:.2f} MB). Using parallel processing...")
+            msg = f"Large file detected ({file_size/1024/1024:.2f} MB). Using parallel processing..."
+            print(msg)
+            data_logger.info(msg)
             return process_in_parallel(file_path)
         else:
-            print(f"Small file detected ({file_size/1024/1024:.2f} MB). Processing normally...")
-            # Original processing code for small files
+            msg = f"Small file detected ({file_size/1024/1024:.2f} MB). Processing normally..."
+            print(msg)
+            data_logger.info(msg)
+            
             try:
                 # First, detect the delimiter by reading a few lines
                 with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
                     sample = f.read(4096)  # Read first 4KB
-                
-                # Check for common delimiters in the sample
-                delimiter = ','  # Default delimiter
                 
                 # Count occurrences of potential delimiters in the sample
                 delimiters = {',': 0, ';': 0, '\t': 0, '|': 0}
@@ -402,24 +421,34 @@ def preprocess_data(file_path):
                         max_count = count
                         delimiter = d
                 
-                print(f"Detected delimiter: '{delimiter}'")
+                msg = f"Detected delimiter: '{delimiter}'"
+                print(msg)
+                data_logger.info(msg)
                 
                 # Load original dataset with the detected delimiter
                 df_original = pd.read_csv(file_path, sep=delimiter, index_col=False)
                 df = df_original.copy()
                 
-                print(f"Original dataset shape: {df.shape}")
+                msg = f"Original dataset shape: {df.shape}"
+                print(msg)
+                data_logger.info(msg)
                 
                 # Step 1: Deduplicate column names
                 df.columns = deduplicate_columns(df.columns)
-                print(f"Deduplicated columns: {list(df.columns)}")
+                msg = f"Deduplicated columns: {list(df.columns)}"
+                print(msg)
+                data_logger.info(msg)
                 
                 # Step 2: Drop columns with no variance
                 dup_cols = [col for col in df.columns if df[col].nunique(dropna=False) == 1]
                 if dup_cols:
                     df = df.drop(columns=dup_cols)
-                    print(f"Dropped {len(dup_cols)} columns with no variance")
-                    print(f"Columns dropped due to no variance: {dup_cols}")
+                    msg = f"Dropped {len(dup_cols)} columns with no variance"
+                    print(msg)
+                    data_logger.info(msg)
+                    msg = f"Columns dropped due to no variance: {dup_cols}"
+                    print(msg)
+                    data_logger.info(msg)
                 
                 # Step 3: Use analyze_correlation to identify and drop highly correlated columns
                 correlation_info = analyze_correlation(df, threshold=0.95)
@@ -427,59 +456,93 @@ def preprocess_data(file_path):
                 if "columns_to_drop" in correlation_info and correlation_info["columns_to_drop"]:
                     columns_to_drop = correlation_info["columns_to_drop"]
                     df = df.drop(columns=columns_to_drop, errors='ignore')
-                    print(f"Dropped {len(columns_to_drop)} highly correlated columns")
-                    print(f"Columns dropped due to high correlation: {columns_to_drop}")
+                    msg = f"Dropped {len(columns_to_drop)} highly correlated columns"
+                    print(msg)
+                    data_logger.info(msg)
+                    msg = f"Columns dropped due to high correlation: {columns_to_drop}"
+                    print(msg)
+                    data_logger.info(msg)
                     
-                    # Print the correlation pairs for reference
+                    # Print and log correlation pairs
                     print("High correlation pairs:")
+                    data_logger.info("High correlation pairs:")
                     for pair in correlation_info.get("high_correlation_pairs", []):
-                        print(f" - {pair['column1']} & {pair['column2']}: {pair['correlation']:.2f}")
+                        msg = f" - {pair['column1']} & {pair['column2']}: {pair['correlation']:.2f}"
+                        print(msg)
+                        data_logger.info(msg)
                     
-                    # Print the correlated groups for reference
+                    # Print and log correlated groups
                     print("Correlated groups:")
+                    data_logger.info("Correlated groups:")
                     for i, group in enumerate(correlation_info.get("correlated_groups", [])):
-                        print(f" - Group {i+1}: {group} - kept {group[0]}")
+                        msg = f" - Group {i+1}: {group} - kept {group[0]}"
+                        print(msg)
+                        data_logger.info(msg)
                 
                 # Step 4: Find and drop duplicate columns automatically
                 equality_results, duplicate_columns_to_drop = find_duplicate_columns(df)
                 
-                # Print the equality analysis results
+                # Print and log equality analysis results
                 for result in equality_results:
                     print(result)
+                    data_logger.info(result)
                 
                 # Drop the identified duplicate columns
                 if duplicate_columns_to_drop:
                     df = df.drop(columns=duplicate_columns_to_drop, errors='ignore')
-                    print(f"Dropped {len(duplicate_columns_to_drop)} duplicate columns")
-                    print(f"Columns dropped due to duplication: {duplicate_columns_to_drop}")
+                    msg = f"Dropped {len(duplicate_columns_to_drop)} duplicate columns"
+                    print(msg)
+                    data_logger.info(msg)
+                    msg = f"Columns dropped due to duplication: {duplicate_columns_to_drop}"
+                    print(msg)
+                    data_logger.info(msg)
                 
                 # Step 5: Drop noisy columns
                 noisy_cols = detect_noisy_columns(df)
                 if noisy_cols:
                     df = df.drop(columns=noisy_cols)
-                    print(f"Dropped {len(noisy_cols)} noisy columns")
-                    print(f"Columns dropped due to noisy content: {noisy_cols}")
+                    msg = f"Dropped {len(noisy_cols)} noisy columns"
+                    print(msg)
+                    data_logger.info(msg)
+                    msg = f"Columns dropped due to noisy content: {noisy_cols}"
+                    print(msg)
+                    data_logger.info(msg)
                 
                 # Step 6: Check for missing values
                 missing_values = df.isnull().sum()
                 print("Missing values in remaining columns:")
-                print(missing_values[missing_values > 0])
+                data_logger.info("Missing values in remaining columns:")
+                missing_vals = missing_values[missing_values > 0]
+                print(missing_vals)
+                data_logger.info(f"\n{missing_vals}")
                 
                 # Step 7: Check for duplicates
                 duplicates = df.duplicated().sum()
-                print(f"Number of duplicate rows: {duplicates}")
+                msg = f"Number of duplicate rows: {duplicates}"
+                print(msg)
+                data_logger.info(msg)
                 
-                print(f"Final preprocessed dataset shape: {df.shape}")
-                print(f"Final columns: {list(df.columns)}")
+                msg = f"Final preprocessed dataset shape: {df.shape}"
+                print(msg)
+                data_logger.info(msg)
+                msg = f"Final columns: {list(df.columns)}"
+                print(msg)
+                data_logger.info(msg)
                 return df
                 
             except Exception as e:
-                print(f"Error preprocessing data: {e}")
-                traceback.print_exc()
+                error_msg = f"Error preprocessing data: {e}"
+                print(error_msg)
+                error_logger.error(error_msg)
+                print(traceback.format_exc())
+                error_logger.error(traceback.format_exc())
                 return None
     except Exception as e:
-        print(f"Error preprocessing data: {e}")
-        traceback.print_exc()
+        error_msg = f"Error preprocessing data: {e}"
+        print(error_msg)
+        error_logger.error(error_msg)
+        print(traceback.format_exc())
+        error_logger.error(traceback.format_exc())
         return None
 
 # ---- Data Loading and Saving Functions ----
@@ -501,7 +564,7 @@ def register_csv_file(file_path, row_count, column_count):
         cursor = db.cursor()
         
         # Create csv_registry table if it doesn't exist
-        cursor.execute('''
+        create_table_query = '''
         IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[csv_registry]') AND type in (N'U'))
         BEGIN
             CREATE TABLE [dbo].[csv_registry] (
@@ -516,177 +579,193 @@ def register_csv_file(file_path, row_count, column_count):
             
             CREATE INDEX [idx_csv_registry_is_processed] ON [dbo].[csv_registry] ([is_processed])
         END
-        ''')
+        '''
+        query_logger.info(create_table_query)
+        # log_db_query(query_logger, create_table_query)
+        cursor.execute(create_table_query)
         
         # Extract filename from path
         file_name = os.path.basename(file_path)
         
         # Check if this file is already registered
-        cursor.execute('SELECT id FROM csv_registry WHERE file_path = ?', (file_path,))
+        check_query = 'SELECT id FROM csv_registry WHERE file_path = ?'
+        query_logger.info(check_query, {'file_path': file_path})
+        # log_db_query(query_logger, check_query, {'file_path': file_path})
+        cursor.execute(check_query, (file_path,))
         existing = cursor.fetchone()
         
         if existing:
             # Update existing entry
-            cursor.execute('''
+            update_query = '''
             UPDATE csv_registry 
             SET row_count = ?, column_count = ?, loaded_at = GETDATE(), is_processed = 1
             WHERE file_path = ?
-            ''', (row_count, column_count, file_path))
+            '''
+            params = (row_count, column_count, file_path)
+            query_logger.info(update_query, params)
+            # log_db_query(query_logger, update_query, params)
+            cursor.execute(update_query, params)
             file_id = existing[0]
+            data_logger.info(f"Updated existing file registration with ID: {file_id}")
         else:
             # Insert new entry
-            cursor.execute('''
+            insert_query = '''
             INSERT INTO csv_registry (file_name, file_path, row_count, column_count, is_processed)
             VALUES (?, ?, ?, ?, 1)
-            ''', (file_name, file_path, row_count, column_count))
+            '''
+            params = (file_name, file_path, row_count, column_count)
+            query_logger.info(insert_query)
+            # log_db_query(query_logger, insert_query, params)
+            cursor.execute(insert_query, params)
             
             # Get the ID of the inserted file
             cursor.execute('SELECT @@IDENTITY')
             file_id = cursor.fetchone()[0]
+            data_logger.info(f"Created new file registration with ID: {file_id}")
         
         db.commit()
         return file_id
     
     except Exception as e:
-        print(f"Error registering CSV file: {e}")
-        traceback.print_exc()
+        error_msg = f"Error registering CSV file: {str(e)}"
+        print(error_msg)
+        error_logger.info(f"File: {file_path}, Rows: {row_count}, Columns: {column_count}")
         return None
 
 def bulk_insert_to_db(df, table_name, conn):
-    """
-    Perform bulk insert of DataFrame to SQL Server table
-    """
-    # First get the structure of the target table
-    cursor = conn.cursor()
-    cursor.execute(f"""
-    SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH 
-    FROM INFORMATION_SCHEMA.COLUMNS 
-    WHERE TABLE_NAME = '{table_name}'
-    ORDER BY ORDINAL_POSITION
-    """)
-    target_columns = cursor.fetchall()
-    
-    # Map DataFrame columns to match target table structure
-    df_processed = df.copy()
-    
-    # Reset index to ensure no unnamed columns
-    df_processed.reset_index(drop=True, inplace=True)
-    
-    # Format timestamp columns before creating temp table
-    time_pattern = re.compile(r'time|date|timestamp', re.IGNORECASE)
-    for col in df_processed.columns:
-        if time_pattern.search(col):
-            # Handle various timestamp formats
-            if df_processed[col].dtype == 'object':
-                # Remove quotes if present
-                df_processed[col] = df_processed[col].str.replace("'", "")
-                # Convert to datetime
-                df_processed[col] = pd.to_datetime(df_processed[col], errors='coerce')
-            # Ensure consistent timezone format
-            if df_processed[col].dtype == 'datetime64[ns]':
-                df_processed[col] = df_processed[col].dt.tz_localize(None)
-    
-    # Create temporary table structure
-    temp_table = f"#temp_{table_name}"
-    column_definitions = []
-    
-    # Skip the identity column (id) when inserting
-    target_columns = [col for col in target_columns if col[0].lower() != 'id']
-    
-    # Prepare column definitions for temp table and process data
-    for col_name, data_type, max_length in target_columns:
-        # Find corresponding DataFrame column
-        df_col = next((c for c in df.columns if c.lower().replace(' ', '_').replace('-', '_').replace('.', '_') == col_name.lower()), None)
-        
-        if df_col is None:
-            if col_name.lower() == 'processed_at':
-                continue
-            else:
-                raise ValueError(f"Required column {col_name} not found in DataFrame")
-        
-        # Add column definition
-        if data_type in ('float', 'real'):
-            sql_type = "FLOAT"
-        elif data_type in ('bigint', 'int'):
-            sql_type = data_type.upper()
-        elif data_type == 'bit':
-            sql_type = "BIT"
-        elif data_type in ('datetime', 'datetime2'):
-            sql_type = "DATETIME2"
-            # Additional datetime formatting if needed
-            if df_col in df_processed and df_processed[df_col].dtype == 'datetime64[ns]':
-                df_processed[df_col] = df_processed[df_col].dt.strftime('%Y-%m-%d %H:%M:%S')
-        else:
-            if max_length == -1:
-                sql_type = "NVARCHAR(MAX)"
-            else:
-                sql_type = f"NVARCHAR({max_length})"
-        
-        column_definitions.append(f"[{col_name}] {sql_type}")
-    
-    create_temp_table = f"""
-    CREATE TABLE {temp_table} (
-        {', '.join(column_definitions)}
-    )
-    """
-    cursor.execute(create_temp_table)
-    
-    # Enable fast_executemany for better performance
-    cursor.fast_executemany = True
+    """Perform bulk insert of DataFrame to SQL Server table"""
+    data_logger.info(f"Starting bulk insert for table: {table_name}")
+    start_time = time.time()
     
     try:
-        # Get final list of columns (excluding id and processed_at)
-        insert_columns = [col[0] for col in target_columns if col[0].lower() not in ('id', 'processed_at')]
+        # First get the structure of the target table
+        cursor = conn.cursor()
+        schema_query = f"""
+        SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = '{table_name}'
+        ORDER BY ORDINAL_POSITION
+        """
+        query_logger.info(schema_query)
+        # log_db_query(query_logger, schema_query)
+        cursor.execute(schema_query)
+        target_columns = cursor.fetchall()
+        data_logger.info(f"Found {len(target_columns)} columns in target table")
         
-        # Prepare the insert statement with explicit column names
+        # Create temporary table structure
+        temp_table = f"#temp_{table_name}"
+        column_definitions = []
+        
+        # Skip the identity column (id) when inserting
+        target_columns = [col for col in target_columns if col[0].lower() != 'id']
+        
+        # Prepare column definitions
+        for col_name, data_type, max_length in target_columns:
+            df_col = next((c for c in df.columns if c.lower().replace(' ', '_').replace('-', '_').replace('.', '_') == col_name.lower()), None)
+            
+            if df_col is None and col_name.lower() != 'processed_at':
+                error_msg = f"Required column {col_name} not found in DataFrame"
+                error_logger.error(error_msg)
+                raise ValueError(error_msg)
+            
+            sql_type = get_sql_type(data_type, max_length, df_col, df)
+            column_definitions.append(f"[{col_name}] {sql_type}")
+        
+        create_temp_table = f"""
+        CREATE TABLE {temp_table} (
+            {', '.join(column_definitions)}
+        )
+        """
+        query_logger.info(create_temp_table)
+        # log_db_query(query_logger, create_temp_table)
+        cursor.execute(create_temp_table)
+        
+        # Prepare insert statement
+        insert_columns = [col[0] for col in target_columns if col[0].lower() not in ('id', 'processed_at')]
         placeholders = ','.join(['?' for _ in insert_columns])
         column_list = ','.join([f'[{col}]' for col in insert_columns])
         insert_sql = f"INSERT INTO {temp_table} ({column_list}) VALUES ({placeholders})"
+        query_logger.info(insert_sql)
+        # log_db_query(query_logger, f"Insert statement template: {insert_sql}")
         
-        # Convert DataFrame to list of tuples for bulk insert
-        rows = []
-        df_columns = [c for c in df_processed.columns if c.lower().replace(' ', '_').replace('-', '_').replace('.', '_') in [col.lower() for col in insert_columns]]
-        
-        for _, row in df_processed[df_columns].iterrows():
-            row_values = []
-            for val in row:
-                if pd.isna(val):
-                    row_values.append(None)
-                elif isinstance(val, (np.int64, np.int32)):
-                    row_values.append(int(val))
-                elif isinstance(val, (np.float64, np.float32)):
-                    row_values.append(float(val))
-                elif isinstance(val, bool):
-                    row_values.append(int(val))
-                elif isinstance(val, pd.Timestamp):
-                    row_values.append(val.strftime('%Y-%m-%d %H:%M:%S'))
-                else:
-                    row_values.append(str(val))
-            rows.append(tuple(row_values))
-        
-        # Perform bulk insert in batches
+        # Prepare and insert data in batches
+        rows = prepare_rows_for_insert(df, insert_columns)
         batch_size = 10000
+        total_batches = (len(rows) - 1) // batch_size + 1
+        
         for i in range(0, len(rows), batch_size):
             batch = rows[i:i + batch_size]
+            batch_num = i // batch_size + 1
+            data_logger.info(f"Inserting batch {batch_num}/{total_batches} ({len(batch)} rows)")
             cursor.executemany(insert_sql, batch)
             conn.commit()
-            print(f"Inserted batch {i//batch_size + 1} of {(len(rows)-1)//batch_size + 1}")
         
         # Copy data from temp table to actual table
-        cursor.execute(f"""
+        final_insert = f"""
         INSERT INTO {table_name} ({column_list})
         SELECT {column_list} FROM {temp_table}
-        """)
+        """
+        query_logger.info(final_insert)
+        # log_db_query(query_logger, final_insert)
+        cursor.execute(final_insert)
         conn.commit()
         
+        duration = time.time() - start_time
+        data_logger.info(f"Completed bulk insert to {table_name} in {duration}")
+        
+    except Exception as e:
+        error_logger.info(f"Error during bulk insert to {table_name}")
+        raise
     finally:
-        # Always try to drop the temporary table
         try:
-            cursor.execute(f"DROP TABLE {temp_table}")
+            drop_query = f"DROP TABLE {temp_table}"
+            query_logger.info(drop_query)
+            # log_db_query(query_logger, drop_query)
+            cursor.execute(drop_query)
             conn.commit()
-        except:
-            pass  # Ignore errors when dropping temp table
+        except Exception as e:
+            error_logger.info(f"Failed to drop temporary table {temp_table}")
 
+def get_sql_type(data_type, max_length, df_col, df):
+    """Helper function to determine SQL type for a column"""
+    if data_type in ('float', 'real'):
+        return "FLOAT"
+    elif data_type in ('bigint', 'int'):
+        return data_type.upper()
+    elif data_type == 'bit':
+        return "BIT"
+    elif data_type in ('datetime', 'datetime2'):
+        return "DATETIME2"
+    else:
+        if max_length == -1:
+            return "NVARCHAR(MAX)"
+        else:
+            return f"NVARCHAR({max_length})"
+
+def prepare_rows_for_insert(df, insert_columns):
+    """Helper function to prepare rows for bulk insert"""
+    rows = []
+    df_columns = [c for c in df.columns if c.lower().replace(' ', '_').replace('-', '_').replace('.', '_') in 
+                 [col.lower() for col in insert_columns]]
+    
+    for _, row in df[df_columns].iterrows():
+        row_values = []
+        for val in row:
+            if pd.isna(val):
+                row_values.append(None)
+            elif isinstance(val, (np.int64, np.int32)):
+                row_values.append(int(val))
+            elif isinstance(val, (np.float64, np.float32)):
+                row_values.append(float(val))
+            elif isinstance(val, bool):
+                row_values.append(int(val))
+            elif isinstance(val, pd.Timestamp):
+                row_values.append(val.strftime('%Y-%m-%d %H:%M:%S'))
+            else:
+                row_values.append(str(val))
+        rows.append(tuple(row_values))
+    
+    return rows
 def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_table=None):
     """
     Save preprocessed data directly to a database table.
@@ -697,7 +776,6 @@ def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_
         batch_size: Size of batches for bulk insert
         target_table: Optional target table name. If provided, data will be inserted into this existing table
     """
-    import time
     start_time = time.time()
     processing_times = {}
     
@@ -714,24 +792,32 @@ def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_
             """)
             
             if cursor.fetchone()[0] == 0:
-                raise ValueError(f"Target table '{target_table}' does not exist")
+                error_msg = f"Target table '{target_table}' does not exist"
+                error_logger.error(error_msg)
+                raise ValueError(error_msg)
                 
             table_name = target_table
-            print(f"Using existing table: {table_name}")
+            msg = f"Using existing table: {table_name}"
+            print(msg)
+            data_logger.info(msg)
         else:
             # Original logic for creating new table
             base_filename = os.path.splitext(os.path.basename(file_path))[0]
             table_name = re.sub(r'[^a-zA-Z0-9_]', '_', base_filename)
             if not table_name[0].isalpha():
                 table_name = "tbl_" + table_name
-            print(f"Creating new table: {table_name}")
+            msg = f"Creating new table: {table_name}"
+            print(msg)
+            data_logger.info(msg)
         
         # Time table creation preparation
         table_prep_start = time.time()
         
         # Get columns from the preprocessed DataFrame
         processed_columns = processed_df.columns.tolist()
-        print(f"Saving data with {len(processed_columns)} columns: {processed_columns}")
+        msg = f"Saving data with {len(processed_columns)} columns: {processed_columns}"
+        print(msg)
+        data_logger.info(msg)
         
         # Create a map of column names to their SAFE SQL names
         column_mapping = {}
@@ -752,6 +838,7 @@ def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_
             DROP TABLE [dbo].[{table_name}]
             """)
             db.commit()
+            data_logger.info(f"Dropped existing table: {table_name}")
             processing_times['table_drop'] = time.time() - drop_start
             
             # Time schema creation
@@ -776,15 +863,16 @@ def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_
                     if col_type == 'object':
                         max_length = processed_df[col].astype(str).str.len().max()
                         if max_length < 50:
-                            sql_type = f"NVARCHAR({max(max_length * 2, 50)})"
+                            sql_type = f"NVARCHAR(50)"
                         elif max_length < 255:
-                            sql_type = "NVARCHAR(255)"
+                            sql_type = f"NVARCHAR(255)"
                         else:
                             sql_type = "NVARCHAR(MAX)"
                     else:
                         sql_type = "NVARCHAR(255)"
                 
                 column_definitions.append(f"[{safe_col}] {sql_type}")
+                data_logger.info(f"Column '{safe_col}' mapped to SQL type: {sql_type}")
             
             # Add processed_at timestamp column
             column_definitions.append("[processed_at] DATETIME2 DEFAULT GETDATE()")
@@ -796,6 +884,7 @@ def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_
             """
             cursor.execute(create_table_sql)
             db.commit()
+            data_logger.info(f"Created new table: {table_name}")
             processing_times['schema_creation'] = time.time() - schema_start
         else:
             processing_times['table_drop'] = 0
@@ -803,22 +892,29 @@ def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_
 
         # Time bulk insert operation
         insert_start = time.time()
-        print("Starting bulk insert operation...")
+        msg = "Starting bulk insert operation..."
+        print(msg)
+        data_logger.info(msg)
         bulk_insert_to_db(processed_df, table_name, db)
         processing_times['bulk_insert'] = time.time() - insert_start
         
         # Calculate total time
         total_time = time.time() - start_time
         
-        # Print timing summary
+        # Print and log timing summary
         print("\nProcessing Time Summary:")
+        data_logger.info("\nProcessing Time Summary:")
         print(f"{'Operation':<20} {'Time (seconds)':<15} {'Percentage':<10}")
         print("-" * 45)
         for operation, duration in processing_times.items():
             percentage = (duration / total_time) * 100
-            print(f"{operation:<20} {duration:,.2f}s{percentage:>11.1f}%")
+            msg = f"{operation:<20} {duration:,.2f}s{percentage:>11.1f}%"
+            print(msg)
+            data_logger.info(msg)
         print("-" * 45)
-        print(f"{'Total time':<20} {total_time:,.2f}s{'100.0':>11}%\n")
+        final_msg = f"{'Total time':<20} {total_time:,.2f}s{'100.0':>11}%\n"
+        print(final_msg)
+        data_logger.info(final_msg)
 
         return {
             "processed_count": len(processed_df),
@@ -836,8 +932,11 @@ def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_
         }
         
     except Exception as e:
-        print(f"Error saving processed data to DB: {e}")
-        traceback.print_exc()
+        error_msg = f"Error saving processed data to DB: {str(e)}"
+        print(error_msg)
+        error_logger.error(error_msg)
+        print(traceback.format_exc())
+        error_logger.error(traceback.format_exc())
         return {
             "error": str(e),
             "processed_count": 0,
@@ -860,10 +959,15 @@ def process_and_load_csv(file_path, batch_size=1000, max_rows=None, target_table
         dict: Processing statistics
     """
     try:
+        data_logger.info(f"Starting to process CSV file: {file_path}")
+        data_logger.info(f"Parameters: batch_size={batch_size}, max_rows={max_rows}, target_table={target_table}")
+        
         # Check if the CSV file exists
         if not os.path.exists(file_path):
+            error_msg = f"CSV file {file_path} not found. Please check if the file exists."
+            error_logger.error(error_msg)
             return {
-                "error": f"CSV file {file_path} not found. Please check if the file exists.",
+                "error": error_msg,
                 "processed_count": 0,
                 "skipped_count": 0,
                 "error_count": 0,
@@ -871,12 +975,14 @@ def process_and_load_csv(file_path, batch_size=1000, max_rows=None, target_table
             }
         
         # Use the preprocess_data function to preprocess the data from the CSV file
-        print(f"Preprocessing CSV file: {file_path}")
+        data_logger.info(f"Preprocessing CSV file: {file_path}")
         processed_df = preprocess_data(file_path)
         
         if processed_df is None:
+            error_msg = "Failed to preprocess file"
+            error_logger.error(error_msg)
             return {
-                "error": "Failed to preprocess file",
+                "error": error_msg,
                 "processed_count": 0,
                 "skipped_count": 0,
                 "error_count": 0,
@@ -886,9 +992,10 @@ def process_and_load_csv(file_path, batch_size=1000, max_rows=None, target_table
         # Apply max_rows limit if specified
         if max_rows is not None and max_rows > 0:
             processed_df = processed_df.head(max_rows)
-            print(f"Limited to {max_rows} rows as requested")
+            data_logger.info(f"Limited to {max_rows} rows as requested")
         
         # Register the CSV file in the database
+        data_logger.info(f"Registering CSV file in database: {file_path}")
         file_id = register_csv_file(
             file_path, 
             len(processed_df), 
@@ -896,8 +1003,10 @@ def process_and_load_csv(file_path, batch_size=1000, max_rows=None, target_table
         )
         
         if file_id is None:
+            error_msg = "Failed to register CSV file in the database"
+            error_logger.error(error_msg)
             return {
-                "error": "Failed to register CSV file in the database",
+                "error": error_msg,
                 "processed_count": 0,
                 "skipped_count": 0,
                 "error_count": 0,
@@ -905,16 +1014,24 @@ def process_and_load_csv(file_path, batch_size=1000, max_rows=None, target_table
             }
         
         # Save the processed data to the database
+        data_logger.info("Starting to save processed data to database")
         result = save_processed_data_to_db(processed_df, file_path, batch_size, target_table)
         
         # Add file_id to the result
         result["file_id"] = file_id
         
+        if "error" in result:
+            error_logger.error(f"Error saving data to database: {result['error']}")
+        else:
+            data_logger.info(f"Successfully processed {result['processed_count']} records into {result.get('processed_table')}")
+            data_logger.info(f"Processing times: {result.get('processing_times', {})}")
+        
         return result
         
     except Exception as e:
-        print(f"Error processing and loading CSV: {e}")
-        traceback.print_exc()
+        error_msg = f"Error processing and loading CSV: {str(e)}"
+        error_logger.error(error_msg)
+        error_logger.error(traceback.format_exc())
         return {
             "error": str(e),
             "processed_count": 0,
@@ -933,13 +1050,18 @@ def load_data_endpoint():
     Requires an admin API key.
     """
     if not is_admin(request.api_user):
+        data_logger.warning(f"Unauthorized access attempt from user: {request.api_user}")
         return jsonify({"error": "Unauthorized - Admin privileges required"}), 403    # Parse parameters
     try:
         # Get parameters from request using helper function
         file_path, batch_size, max_rows, target_table = parse_request_params(request)
 
+        # Log request parameters
+        data_logger.info(f"Data load request - file_path: {file_path}, batch_size: {batch_size}, max_rows: {max_rows}, target_table: {target_table}")
+
         # Validate required parameters
         if not file_path:
+            error_logger.error("Missing required parameter: file_path")
             return jsonify({
                 "error": "file_path required in request body, form data, or query parameters",
                 "help": "Set Content-Type to application/json and provide {'file_path': 'your/file/path.csv'} in the request body"
@@ -949,6 +1071,7 @@ def load_data_endpoint():
         result = process_and_load_csv(file_path, batch_size, max_rows, target_table)
         
         if "error" in result:
+            error_logger.error(f"Failed to process CSV file: {result['error']}")
             return jsonify({
                 "success": False,
                 "error": result["error"],
@@ -960,6 +1083,7 @@ def load_data_endpoint():
                 }
             }), 500
             
+        data_logger.info(f"Successfully processed CSV file: {file_path}")
         return jsonify({
             "success": True,
             "message": f"Successfully processed {result['processed_count']} records into {result.get('processed_table')}",
@@ -975,6 +1099,9 @@ def load_data_endpoint():
         })
 
     except Exception as e:
+        error_msg = f"Unexpected error in load_data_endpoint: {str(e)}"
+        error_logger.error(error_msg)
+        error_logger.error(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 # Get file details
@@ -983,6 +1110,7 @@ def load_data_endpoint():
 def get_file_details(table_name):
     """Get details about a specific table."""
     if not is_admin(request.api_user):
+        data_logger.warning(f"Unauthorized access attempt from user: {request.api_user}")
         return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
     
     try:
@@ -994,23 +1122,30 @@ def get_file_details(table_name):
             processed_table_name = "tbl_" + processed_table_name
             
         # Check if table exists and get its details        
-        cursor.execute(f'''
+        table_info_query = f'''
         SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE
         FROM INFORMATION_SCHEMA.TABLES
         WHERE TABLE_NAME = '{processed_table_name}'
-        ''')
+        '''
+        query_logger.info(table_info_query)
+        # log_db_query(query_logger, table_info_query)
+        cursor.execute(table_info_query)
         table_info = cursor.fetchone()
         
         if not table_info:
+            error_logger.error(f"Table not found: {processed_table_name}")
             return jsonify({"error": "Table not found"}), 404
             
         # Get column information
-        cursor.execute(f'''
+        column_info_query = f'''
         SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_NAME = '{processed_table_name}'
         ORDER BY ORDINAL_POSITION
-        ''')
+        '''
+        query_logger.info(column_info_query)
+        # log_db_query(query_logger, column_info_query)
+        cursor.execute(column_info_query)
         
         columns = []
         for col in cursor.fetchall():
@@ -1022,41 +1157,27 @@ def get_file_details(table_name):
             columns.append(column_info)
             
         # Get row count
-        cursor.execute(f"SELECT COUNT(*) FROM [{processed_table_name}]")
+        count_query = f"SELECT COUNT(*) FROM [{processed_table_name}]"
+        query_logger.info(count_query)
+        # log_db_query(query_logger, count_query)
+        cursor.execute(count_query)
         total_rows = cursor.fetchone()[0]
         
-        # # Get sample data (first 5 rows)
-        # cursor.execute(f'''
-        # SELECT TOP 5 *
-        # FROM [{processed_table_name}]
-        # ORDER BY id
-        # ''')
-        
-        # rows = cursor.fetchall()
-        # sample_data = []
-        # column_names = [col["name"] for col in columns]
-        
-        # for row in rows:
-        #     row_dict = {}
-        #     for i, col in enumerate(column_names):
-        #         if isinstance(row[i], datetime):
-        #             row_dict[col] = row[i].isoformat()
-        #         else:
-        #             row_dict[col] = row[i]
-        #     sample_data.append(row_dict)
-        
-        return jsonify({
+        response_data = {
             "table_name": processed_table_name,
             "schema": table_info[0],
             "table_type": table_info[2],
             "total_rows": total_rows,
             "columns": columns,
             "column_count": len(columns),
-            # "sample_data": sample_data,
             "description": f"Details for table {processed_table_name}"
-        })
+        }
+        
+        data_logger.info(f"Successfully retrieved details for table: {processed_table_name}")
+        return jsonify(response_data)
         
     except Exception as e:
+        error_logger.info(f"Error getting details for table: {table_name}")
         return jsonify({"error": str(e)}), 500
 
 # Get processed table data
@@ -1149,11 +1270,17 @@ def csv_file_stats():
         cursor = get_cursor()
         
         # Get total files
-        cursor.execute('SELECT COUNT(*) FROM csv_registry')
+        total_query = 'SELECT COUNT(*) FROM csv_registry'
+        query_logger.info(total_query)
+        # log_db_query(query_logger, total_query)
+        cursor.execute(total_query)
         total_files = cursor.fetchone()[0]
         
         # Get processed vs unprocessed
-        cursor.execute('SELECT is_processed, COUNT(*) FROM csv_registry GROUP BY is_processed')
+        status_query = 'SELECT is_processed, COUNT(*) FROM csv_registry GROUP BY is_processed'
+        query_logger.info(status_query)
+        # log_db_query(query_logger, status_query)
+        cursor.execute(status_query)
         
         processed_files = 0
         unprocessed_files = 0
@@ -1165,11 +1292,14 @@ def csv_file_stats():
                 unprocessed_files = row[1]
         
         # Get file details
-        cursor.execute('''
+        file_details_query = '''
         SELECT id, file_name, file_path, row_count, column_count, loaded_at, is_processed
         FROM csv_registry
         ORDER BY loaded_at DESC
-        ''')
+        '''
+        query_logger.info(file_details_query)
+        # log_db_query(query_logger, file_details_query)
+        cursor.execute(file_details_query)
         
         files = []
         for row in cursor.fetchall():
@@ -1184,24 +1314,31 @@ def csv_file_stats():
             })
         
         # Get processed tables
-        cursor.execute('''
+        tables_query = '''
         SELECT table_name
         FROM information_schema.tables
         WHERE table_name LIKE 'processed_data_%'
-        ''')
+        '''
+        query_logger.info(tables_query)
+        # log_db_query(query_logger, tables_query)
+        cursor.execute(tables_query)
         
         processed_tables = [row[0] for row in cursor.fetchall()]
         
-        return jsonify({
+        response_data = {
             "total_files": total_files,
             "processed_files": processed_files,
             "unprocessed_files": unprocessed_files,
             "files": files,
             "processed_tables": processed_tables,
             "processed_tables_count": len(processed_tables)
-        })
+        }
+        
+        data_logger.info(f"Successfully retrieved stats. Total files: {total_files}, Processed: {processed_files}, Unprocessed: {unprocessed_files}")
+        return jsonify(response_data)
         
     except Exception as e:
+        error_logger.info(f"Error retrieving CSV file stats")
         return jsonify({"error": str(e)}), 500
 
 def parse_request_params(request):
@@ -1211,27 +1348,38 @@ def parse_request_params(request):
     max_rows = None
     target_table = None
 
+    data_logger.info("Parsing request parameters...")
+
     # Check JSON data
     if request.is_json:
+        data_logger.info("Found JSON data in request")
         data = request.get_json()
         if data:
             file_path = data.get('file_path')
             batch_size = data.get('batch_size', 1000)
             max_rows = data.get('max_rows')
             target_table = data.get('target_table')
+            data_logger.info(f"Parsed parameters from JSON: file_path={file_path}, batch_size={batch_size}, max_rows={max_rows}, target_table={target_table}")
     
     # Check form data
     if file_path is None and request.form:
+        data_logger.info("Found form data in request")
         file_path = request.form.get('file_path')
         batch_size = int(request.form.get('batch_size', 1000))
         max_rows = int(request.form.get('max_rows')) if 'max_rows' in request.form else None
         target_table = request.form.get('target_table')
+        data_logger.info(f"Parsed parameters from form data: file_path={file_path}, batch_size={batch_size}, max_rows={max_rows}, target_table={target_table}")
     
     # Check query parameters
     if file_path is None and request.args:
+        data_logger.info("Found query parameters in request")
         file_path = request.args.get('file_path')
         batch_size = int(request.args.get('batch_size', 1000))
         max_rows = int(request.args.get('max_rows')) if 'max_rows' in request.args else None
         target_table = request.args.get('target_table')
+        data_logger.info(f"Parsed parameters from query string: file_path={file_path}, batch_size={batch_size}, max_rows={max_rows}, target_table={target_table}")
+    
+    if file_path is None:
+        data_logger.warning("No file_path parameter found in request")
     
     return file_path, batch_size, max_rows, target_table
