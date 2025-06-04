@@ -1,0 +1,4 @@
+[2025-05-23 15:32:35] INFO [app.log_request_info:38] Request received: GET http://127.0.0.1:5000/
+[2025-05-23 15:32:35] INFO [app.log_response_info:46] Response status: 200
+[2025-05-23 15:32:41] INFO [app.log_request_info:38] Request received: GET http://127.0.0.1:5000/api/data/file-details/FISHCM_Wifi_All_Login
+[2025-05-23 15:32:41] INFO [app.log_response_info:46] Response status: 200

@@ -1,7 +1,9 @@
 # server.py
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import pyodbc
 import os
+import time
+from logger import app_logger, db_logger, log_error, log_request, log_db_query
 
 # Create the Flask application
 app = Flask(__name__)
@@ -28,6 +30,22 @@ def close_db(e=None):
 
 # Register database close function
 app.teardown_appcontext(close_db)
+
+# Request logging middleware
+@app.before_request
+def log_request_info():
+    """Log information about each request"""
+    app_logger.info(f"Request received: {request.method} {request.url}")
+    app_logger.debug(f"Headers: {dict(request.headers)}")
+    if request.data:
+        app_logger.debug(f"Request data: {request.get_data(as_text=True)}")
+
+@app.after_request
+def log_response_info(response):
+    """Log information about each response"""
+    app_logger.info(f"Response status: {response.status_code}")
+    app_logger.debug(f"Response headers: {dict(response.headers)}")
+    return response
 
 # Root route for API info
 @app.route('/')
