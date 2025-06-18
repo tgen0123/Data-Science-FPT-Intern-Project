@@ -3,14 +3,14 @@ from flask import Flask, jsonify, request
 import pyodbc
 import os
 import time
-from logger import app_logger, db_logger, log_error, log_request, log_db_query
+from logger import app_logger, log_error, log_request, log_db_query
 
 # Create the Flask application
 app = Flask(__name__)
 
 # SQL Server Configuration
-app.config['SQLSERVER_HOST'] = 'IT-ANNVT8\\TUONGAN0123' 
-app.config['SQLSERVER_DB'] = 'SAMPLE_PROJECT_DATA'             
+app.config['SQLSERVER_HOST'] = '172.16.27.68' 
+app.config['SQLSERVER_DB'] = 'PROJECT_DATA'             
 
 # Global variable for database connection
 def get_db_connection():

@@ -710,48 +710,11 @@ def preprocess_data(file_path):
                 df_original = pd.read_csv(file_path, sep=delimiter, index_col=False)
                 df = df_original.copy()
                 
-                msg = f"Original dataset shape: {df.shape}"
-                print(msg)
-                data_logger.info(msg)
-
-                # NEW STEP: Remove completely empty rows (rows with all values missing or empty)
-                # Convert empty strings to NaN first for consistent handling
-                df = df.replace(r'^\s*$', np.nan, regex=True)
-                
-                # Identify rows where all values are NaN
-                empty_rows = df.isna().all(axis=1)
-                empty_row_count = empty_rows.sum()
-                
-                if empty_row_count > 0:
-                    print(f"Found {empty_row_count} completely empty rows")
-                    data_logger.info(f"Found {empty_row_count} completely empty rows")
-                    # Keep only non-empty rows
-                    df = df[~empty_rows].reset_index(drop=True)
-                    print(f"Removed {empty_row_count} empty rows. New shape: {df.shape}")
-                    data_logger.info(f"Removed {empty_row_count} empty rows. New shape: {df.shape}")
-                else:
-                    print("No completely empty rows found")
-                    data_logger.info("No completely empty rows found")
+                print(f"Original dataset shape: {df.shape}")
                 
                 # Step 1: Deduplicate column names
                 df.columns = deduplicate_columns(df.columns)
-                msg = f"Deduplicated columns: {list(df.columns)}"
-                print(msg)
-                data_logger.info(msg)
-                
-                # Step 1.5: NEW - Detect and parse date columns
-                print("Detecting and parsing date columns...")
-                data_logger.info("Detecting and parsing date columns...")
-                df = detect_and_parse_dates(df, threshold=0.7)
-                
-                # Log the data types after date parsing
-                date_columns = [col for col in df.columns if 'datetime64' in str(df[col].dtype)]
-                if date_columns:
-                    print(f"Date columns detected: {date_columns}")
-                    data_logger.info(f"Date columns detected: {date_columns}")
-                else:
-                    print("No date columns detected")
-                    data_logger.info("No date columns detected")
+                print(f"Deduplicated columns: {list(df.columns)}")
                 
                 # Step 2: Drop columns with no variance
                 dup_cols = [col for col in df.columns if df[col].nunique(dropna=False) == 1]
@@ -832,25 +795,10 @@ def preprocess_data(file_path):
                 
                 # Step 7: Check for duplicates
                 duplicates = df.duplicated().sum()
-                msg = f"Number of duplicate rows: {duplicates}"
-                print(msg)
-                data_logger.info(msg)
+                print(f"Number of duplicate rows: {duplicates}")
                 
-                # Final summary of column types
-                print("\nFinal column types:")
-                data_logger.info("Final column types:")
-                for col in df.columns:
-                    col_type = str(df[col].dtype)
-                    msg = f"  {col}: {col_type}"
-                    print(msg)
-                    data_logger.info(msg)
-                
-                msg = f"Final preprocessed dataset shape: {df.shape}"
-                print(msg)
-                data_logger.info(msg)
-                msg = f"Final columns: {list(df.columns)}"
-                print(msg)
-                data_logger.info(msg)
+                print(f"Final preprocessed dataset shape: {df.shape}")
+                print(f"Final columns: {list(df.columns)}")
                 return df
                 
             except Exception as e:
@@ -903,16 +851,7 @@ def register_csv_file(file_path, row_count, column_count, date_columns=None):
             )
             
             CREATE INDEX [idx_csv_registry_is_processed] ON [dbo].[csv_registry] ([is_processed])
-            CREATE INDEX [idx_csv_registry_file_name] ON [dbo].[csv_registry] ([file_name])
         END
-        '''
-        query_logger.info(create_table_query)
-        cursor.execute(create_table_query)
-        
-        # Add date_columns_detected column if it doesn't exist
-        cursor.execute('''
-        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'csv_registry' AND COLUMN_NAME = 'date_columns_detected')
-        ALTER TABLE csv_registry ADD date_columns_detected NVARCHAR(MAX) NULL
         ''')
         
         # Extract filename from path
@@ -924,9 +863,7 @@ def register_csv_file(file_path, row_count, column_count, date_columns=None):
             date_columns_json = json.dumps(date_columns)
         
         # Check if this file is already registered
-        check_query = 'SELECT id FROM csv_registry WHERE file_path = ?'
-        query_logger.info(check_query, {'file_path': file_path})
-        cursor.execute(check_query, (file_path,))
+        cursor.execute('SELECT id FROM csv_registry WHERE file_path = ?', (file_path,))
         existing = cursor.fetchone()
         
         if existing:
@@ -935,21 +872,15 @@ def register_csv_file(file_path, row_count, column_count, date_columns=None):
             UPDATE csv_registry 
             SET row_count = ?, column_count = ?, loaded_at = GETDATE(), is_processed = 1, date_columns_detected = ?
             WHERE file_path = ?
-            '''
-            params = (row_count, column_count, date_columns_json, file_path)
-            query_logger.info(update_query, params)
-            cursor.execute(update_query, params)
+            ''', (row_count, column_count, file_path))
             file_id = existing[0]
             data_logger.info(f"Updated existing file registration with ID: {file_id}")
         else:
             # Insert new entry
-            insert_query = '''
-            INSERT INTO csv_registry (file_name, file_path, row_count, column_count, is_processed, date_columns_detected)
-            VALUES (?, ?, ?, ?, 1, ?)
-            '''
-            params = (file_name, file_path, row_count, column_count, date_columns_json)
-            query_logger.info(insert_query)
-            cursor.execute(insert_query, params)
+            cursor.execute('''
+            INSERT INTO csv_registry (file_name, file_path, row_count, column_count, is_processed)
+            VALUES (?, ?, ?, ?, 1)
+            ''', (file_name, file_path, row_count, column_count))
             
             # Get the ID of the inserted file
             cursor.execute('SELECT @@IDENTITY')
@@ -960,11 +891,144 @@ def register_csv_file(file_path, row_count, column_count, date_columns=None):
         return file_id
     
     except Exception as e:
-        error_msg = f"Error registering CSV file: {str(e)}"
-        print(error_msg)
-        error_logger.error(error_msg)
-        error_logger.info(f"File: {file_path}, Rows: {row_count}, Columns: {column_count}")
+        print(f"Error registering CSV file: {e}")
+        traceback.print_exc()
         return None
+
+def bulk_insert_to_db(df, table_name, conn):
+    """
+    Perform bulk insert of DataFrame to SQL Server table
+    """
+    # First get the structure of the target table
+    cursor = conn.cursor()
+    cursor.execute(f"""
+    SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_NAME = '{table_name}'
+    ORDER BY ORDINAL_POSITION
+    """)
+    target_columns = cursor.fetchall()
+    
+    # Map DataFrame columns to match target table structure
+    df_processed = df.copy()
+    
+    # Reset index to ensure no unnamed columns
+    df_processed.reset_index(drop=True, inplace=True)
+    
+    # Format timestamp columns before creating temp table
+    time_pattern = re.compile(r'time|date|timestamp', re.IGNORECASE)
+    for col in df_processed.columns:
+        if time_pattern.search(col):
+            # Handle various timestamp formats
+            if df_processed[col].dtype == 'object':
+                # Remove quotes if present
+                df_processed[col] = df_processed[col].str.replace("'", "")
+                # Convert to datetime
+                df_processed[col] = pd.to_datetime(df_processed[col], errors='coerce')
+            # Ensure consistent timezone format
+            if df_processed[col].dtype == 'datetime64[ns]':
+                df_processed[col] = df_processed[col].dt.tz_localize(None)
+    
+    # Create temporary table structure
+    temp_table = f"#temp_{table_name}"
+    column_definitions = []
+    
+    # Skip the identity column (id) when inserting
+    target_columns = [col for col in target_columns if col[0].lower() != 'id']
+    
+    # Prepare column definitions for temp table and process data
+    for col_name, data_type, max_length in target_columns:
+        # Find corresponding DataFrame column
+        df_col = next((c for c in df.columns if c.lower().replace(' ', '_').replace('-', '_').replace('.', '_') == col_name.lower()), None)
+        
+        if df_col is None:
+            if col_name.lower() == 'processed_at':
+                continue
+            else:
+                raise ValueError(f"Required column {col_name} not found in DataFrame")
+        
+        # Add column definition
+        if data_type in ('float', 'real'):
+            sql_type = "FLOAT"
+        elif data_type in ('bigint', 'int'):
+            sql_type = data_type.upper()
+        elif data_type == 'bit':
+            sql_type = "BIT"
+        elif data_type in ('datetime', 'datetime2'):
+            sql_type = "DATETIME2"
+            # Additional datetime formatting if needed
+            if df_col in df_processed and df_processed[df_col].dtype == 'datetime64[ns]':
+                df_processed[df_col] = df_processed[df_col].dt.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            if max_length == -1:
+                sql_type = "NVARCHAR(MAX)"
+            else:
+                sql_type = f"NVARCHAR({max_length})"
+        
+        column_definitions.append(f"[{col_name}] {sql_type}")
+    
+    create_temp_table = f"""
+    CREATE TABLE {temp_table} (
+        {', '.join(column_definitions)}
+    )
+    """
+    cursor.execute(create_temp_table)
+    
+    # Enable fast_executemany for better performance
+    cursor.fast_executemany = True
+    
+    try:
+        # Get final list of columns (excluding id and processed_at)
+        insert_columns = [col[0] for col in target_columns if col[0].lower() not in ('id', 'processed_at')]
+        
+        # Prepare the insert statement with explicit column names
+        placeholders = ','.join(['?' for _ in insert_columns])
+        column_list = ','.join([f'[{col}]' for col in insert_columns])
+        insert_sql = f"INSERT INTO {temp_table} ({column_list}) VALUES ({placeholders})"
+        
+        # Convert DataFrame to list of tuples for bulk insert
+        rows = []
+        df_columns = [c for c in df_processed.columns if c.lower().replace(' ', '_').replace('-', '_').replace('.', '_') in [col.lower() for col in insert_columns]]
+        
+        for _, row in df_processed[df_columns].iterrows():
+            row_values = []
+            for val in row:
+                if pd.isna(val):
+                    row_values.append(None)
+                elif isinstance(val, (np.int64, np.int32)):
+                    row_values.append(int(val))
+                elif isinstance(val, (np.float64, np.float32)):
+                    row_values.append(float(val))
+                elif isinstance(val, bool):
+                    row_values.append(int(val))
+                elif isinstance(val, pd.Timestamp):
+                    row_values.append(val.strftime('%Y-%m-%d %H:%M:%S'))
+                else:
+                    row_values.append(str(val))
+            rows.append(tuple(row_values))
+        
+        # Perform bulk insert in batches
+        batch_size = 10000
+        for i in range(0, len(rows), batch_size):
+            batch = rows[i:i + batch_size]
+            cursor.executemany(insert_sql, batch)
+            conn.commit()
+            print(f"Inserted batch {i//batch_size + 1} of {(len(rows)-1)//batch_size + 1}")
+        
+        # Copy data from temp table to actual table
+        cursor.execute(f"""
+        INSERT INTO {table_name} ({column_list})
+        SELECT {column_list} FROM {temp_table}
+        """)
+        conn.commit()
+        
+    finally:
+        # Always try to drop the temporary table
+        try:
+            cursor.execute(f"DROP TABLE {temp_table}")
+            conn.commit()
+        except:
+            pass  # Ignore errors when dropping temp table
 
 def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_table=None):
     """
@@ -1066,6 +1130,10 @@ def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_
         # Time table creation preparation
         table_prep_start = time.time()
         
+        # Get columns from the preprocessed DataFrame
+        processed_columns = processed_df.columns.tolist()
+        print(f"Saving data with {len(processed_columns)} columns: {processed_columns}")
+        
         # Create a map of column names to their SAFE SQL names
         column_mapping = {}
         timestamp_pattern = re.compile(r'time|date|timestamp', re.IGNORECASE)
@@ -1128,52 +1196,20 @@ def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_
                     sql_type = "BIT"
                     print(f"    Mapped to BIT")
                 else:
-                    # Determine appropriate length for string columns based on actual data
-                    if col_type_str in ['object', 'string']:
-                        # Sample non-null values to determine length
-                        sample_values = processed_df[col].dropna().astype(str).head(100)
-                        if len(sample_values) > 0:
-                            max_length = sample_values.str.len().max()
-                            
-                            # Categorize string columns by their content
-                            # IP addresses - use non-capturing groups to avoid warning
-                            ip_pattern = r'(?:\d{1,3}\.){3}\d{1,3}'
-                            
-                            if (col.lower().endswith('ip') or 
-                                'address' in col.lower() or 
-                                processed_df[col].astype(str).str.contains(ip_pattern, regex=True).mean() > 0.5):
-                                sql_type = "NVARCHAR(45)"  # IPv6 addresses can be up to 45 chars
-                            # User identifiers
-                            elif any(name in col.lower() for name in ['user', 'name', 'login', 'email', 'account']):
-                                sql_type = "NVARCHAR(255)"
-                            # Session or identifier columns
-                            elif any(name in col.lower() for name in ['id', 'session', 'identifier', 'token', 'key']):
-                                sql_type = "NVARCHAR(255)"
-                            # Short text columns
-                            elif max_length < 50:
-                                sql_type = f"NVARCHAR({max(max_length * 2, 50)})"
-                            # Medium text columns
-                            elif max_length < 255:
-                                sql_type = "NVARCHAR(255)"
-                            # Large text columns
-                            else:
-                                sql_type = "NVARCHAR(MAX)"
-                        else:
-                            # Default for empty columns
+                    # For string columns, determine appropriate length
+                    if col_type == 'object':
+                        max_length = processed_df[col].astype(str).str.len().max()
+                        if max_length < 50:
+                            sql_type = f"NVARCHAR({max(max_length * 2, 50)})"
+                        elif max_length < 255:
                             sql_type = "NVARCHAR(255)"
+                        else:
+                            sql_type = "NVARCHAR(MAX)"
                     else:
-                        # Unknown data type
-                        sql_type = "NVARCHAR(MAX)"
-                    
-                    print(f"    Mapped to {sql_type}")
+                        sql_type = "NVARCHAR(255)"
                 
                 column_definitions.append(f"[{safe_col}] {sql_type}")
-                data_logger.info(f"Column '{safe_col}' mapped to SQL type: {sql_type}")
             
-            # Add original_id column if needed (if there was an id column in the data)
-            if 'id' in processed_columns:
-                column_definitions.append("[original_id] BIGINT")
-                
             # Add processed_at timestamp column
             column_definitions.append("[processed_at] DATETIME2 DEFAULT GETDATE()")
             
@@ -1192,104 +1228,8 @@ def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_
 
         # Time bulk insert operation
         insert_start = time.time()
-        msg = "Starting optimized insert operation..."
-        print(msg)
-        data_logger.info(msg)
-        
-        # Optimized insert approach
-        processed_count = 0
-        skipped_count = 0
-        error_count = 0
-        
-        # Process in batches
-        total_rows = len(processed_df)
-        print(f"📊 Starting to process {total_rows} rows in batches of {batch_size}")
-        data_logger.info(f"Starting to process {total_rows} rows in batches of {batch_size}")
-        
-        for i in range(0, total_rows, batch_size):
-            end_idx = min(i + batch_size, total_rows)
-            batch = processed_df.iloc[i:end_idx]
-            
-            for _, row in batch.iterrows():
-                try:
-                    # Get only the columns with non-null values
-                    valid_columns = []
-                    valid_values = []
-                    valid_placeholders = []
-                    
-                    for col in processed_columns:
-                        if not pd.isna(row[col]):
-                            # Handle the id column specially
-                            if col.lower() == 'id':
-                                # Store as original_id instead
-                                valid_columns.append('original_id')
-                            else:
-                                safe_col = column_mapping[col]
-                                valid_columns.append(safe_col)
-                            
-                            # Convert value to appropriate type for SQL
-                            value = row[col]
-                            col_dtype_str = str(processed_df[col].dtype)
-                            
-                            # FIXED: Handle datetime columns properly for SQL Server
-                            if 'datetime64' in col_dtype_str:
-                                if pd.isna(value):
-                                    value = None
-                                else:
-                                    # Convert pandas Timestamp to Python datetime for pyodbc
-                                    if hasattr(value, 'to_pydatetime'):
-                                        # Convert to native Python datetime object
-                                        python_dt = value.to_pydatetime()
-                                        
-                                        # Remove timezone info if present (SQL Server DATETIME2 doesn't store timezone)
-                                        if python_dt.tzinfo is not None:
-                                            python_dt = python_dt.replace(tzinfo=None)
-                                        
-                                        value = python_dt
-                                        print(f"    🕐 Converted datetime: {value} (type: {type(value)})")
-                                    else:
-                                        # Fallback: convert to string in ISO format
-                                        value = pd.to_datetime(value).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]  # Remove last 3 digits for milliseconds
-                                        print(f"    ⚠️  Fallback datetime conversion: {value}")
-                            elif isinstance(value, (np.int64, np.int32)):
-                                value = int(value)
-                            elif isinstance(value, (np.float64, np.float32)):
-                                value = float(value)
-                            elif isinstance(value, bool):
-                                value = int(value)
-                            
-                            # Add value and placeholder
-                            valid_values.append(value)
-                            valid_placeholders.append('?')
-                    
-                    # Only insert if we have valid column data
-                    if valid_columns:
-                        # Insert into processed_data table
-                        column_str = ', '.join([f"[{col}]" for col in valid_columns])
-                        placeholder_str = ', '.join(valid_placeholders)
-                        
-                        insert_sql = f'''
-                        INSERT INTO [{table_name}]
-                        ({column_str})
-                        VALUES ({placeholder_str})
-                        '''
-                        
-                        cursor.execute(insert_sql, valid_values)
-                        processed_count += 1
-                    else:
-                        skipped_count += 1
-                    
-                except Exception as e:
-                    print(f"❌ Error processing row {processed_count + skipped_count + error_count}: {e}")
-                    error_logger.error(f"Error processing row: {e}")
-                    error_count += 1
-            
-            # Commit batch
-            db.commit()
-            if i // batch_size % 10 == 0:  # Print every 10 batches
-                print(f"📈 Processed batch {i//batch_size + 1}/{(total_rows-1)//batch_size + 1} ({processed_count} rows processed so far)")
-                data_logger.info(f"Processed batch {i//batch_size + 1}/{(total_rows-1)//batch_size + 1} ({processed_count} rows processed so far)")
-        
+        print("Starting bulk insert operation...")
+        bulk_insert_to_db(processed_df, table_name, db)
         processing_times['bulk_insert'] = time.time() - insert_start
         
         # Calculate total time
@@ -1306,12 +1246,7 @@ def save_processed_data_to_db(processed_df, file_path, batch_size=10000, target_
             print(msg)
             data_logger.info(msg)
         print("-" * 45)
-        final_msg = f"{'Total time':<20} {total_time:,.2f}s{'100.0':>11}%\n"
-        print(final_msg)
-        data_logger.info(final_msg)
-        
-        print(f"✅ Completed data insertion: {processed_count} processed, {skipped_count} skipped, {error_count} errors")
-        data_logger.info(f"Completed data insertion: {processed_count} processed, {skipped_count} skipped, {error_count} errors")
+        print(f"{'Total time':<20} {total_time:,.2f}s{'100.0':>11}%\n")
 
         return {
             "processed_count": processed_count,
@@ -1390,10 +1325,7 @@ def process_and_load_csv(file_path, batch_size=1000, max_rows=None, target_table
         # Apply max_rows limit if specified
         if max_rows is not None and max_rows > 0:
             processed_df = processed_df.head(max_rows)
-            data_logger.info(f"Limited to {max_rows} rows as requested")
-        
-        # Get date columns info before registering the file
-        date_columns = [col for col in processed_df.columns if 'datetime64' in str(processed_df[col].dtype)]
+            print(f"Limited to {max_rows} rows as requested")
         
         # Register the CSV file in the database
         data_logger.info(f"Registering CSV file in database: {file_path}")
@@ -1529,9 +1461,7 @@ def get_file_details(table_name):
         SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE
         FROM INFORMATION_SCHEMA.TABLES
         WHERE TABLE_NAME = '{processed_table_name}'
-        '''
-        query_logger.info(table_info_query)
-        cursor.execute(table_info_query)
+        ''')
         table_info = cursor.fetchone()
         
         if not table_info:
@@ -1544,9 +1474,7 @@ def get_file_details(table_name):
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_NAME = '{processed_table_name}'
         ORDER BY ORDINAL_POSITION
-        '''
-        query_logger.info(column_info_query)
-        cursor.execute(column_info_query)
+        ''')
         
         columns = []
         for col in cursor.fetchall():
@@ -1558,9 +1486,7 @@ def get_file_details(table_name):
             columns.append(column_info)
             
         # Get row count
-        count_query = f"SELECT COUNT(*) FROM [{processed_table_name}]"
-        query_logger.info(count_query)
-        cursor.execute(count_query)
+        cursor.execute(f"SELECT COUNT(*) FROM [{processed_table_name}]")
         total_rows = cursor.fetchone()[0]
         
         response_data = {
@@ -1577,7 +1503,6 @@ def get_file_details(table_name):
         return jsonify(response_data)
         
     except Exception as e:
-        error_logger.error(f"Error getting details for table: {table_name}")
         return jsonify({"error": str(e)}), 500
 
 # Get processed table data
@@ -1670,15 +1595,11 @@ def csv_file_stats():
         cursor = get_cursor()
         
         # Get total files
-        total_query = 'SELECT COUNT(*) FROM csv_registry'
-        query_logger.info(total_query)
-        cursor.execute(total_query)
+        cursor.execute('SELECT COUNT(*) FROM csv_registry')
         total_files = cursor.fetchone()[0]
         
         # Get processed vs unprocessed
-        status_query = 'SELECT is_processed, COUNT(*) FROM csv_registry GROUP BY is_processed'
-        query_logger.info(status_query)
-        cursor.execute(status_query)
+        cursor.execute('SELECT is_processed, COUNT(*) FROM csv_registry GROUP BY is_processed')
         
         processed_files = 0
         unprocessed_files = 0
@@ -1689,14 +1610,12 @@ def csv_file_stats():
             else:  # is_processed = 0
                 unprocessed_files = row[1]
         
-        # Get file details including date columns
-        file_details_query = '''
-        SELECT id, file_name, file_path, row_count, column_count, loaded_at, is_processed, date_columns_detected
+        # Get file details
+        cursor.execute('''
+        SELECT id, file_name, file_path, row_count, column_count, loaded_at, is_processed
         FROM csv_registry
         ORDER BY loaded_at DESC
-        '''
-        query_logger.info(file_details_query)
-        cursor.execute(file_details_query)
+        ''')
         
         files = []
         for row in cursor.fetchall():
@@ -1724,9 +1643,7 @@ def csv_file_stats():
         SELECT table_name
         FROM information_schema.tables
         WHERE table_name LIKE 'processed_data_%'
-        '''
-        query_logger.info(tables_query)
-        cursor.execute(tables_query)
+        ''')
         
         processed_tables = [row[0] for row in cursor.fetchall()]
         
@@ -1743,7 +1660,6 @@ def csv_file_stats():
         return jsonify(response_data)
         
     except Exception as e:
-        error_logger.error(f"Error retrieving CSV file stats: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 def parse_request_params(request):

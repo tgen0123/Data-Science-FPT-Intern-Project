@@ -1,0 +1,1714 @@
+[2025-06-04 15:32:26] INFO [data.parse_request_params:1358] Parsing request parameters...
+[2025-06-04 15:32:26] INFO [data.parse_request_params:1362] Found JSON data in request
+[2025-06-04 15:32:26] INFO [data.parse_request_params:1369] Parsed parameters from JSON: file_path=data/FISHCM-NetworkLogon.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:32:26] INFO [data.load_data_endpoint:1077] Data load request - file_path: data/FISHCM-NetworkLogon.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 15:32:26] INFO [data.process_and_load_csv:979] Starting to process CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 15:32:26] INFO [data.process_and_load_csv:980] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:32:26] INFO [data.process_and_load_csv:995] Preprocessing CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 15:32:26] INFO [data.preprocess_data:405] Small file detected (7.33 MB). Processing normally...
+[2025-06-04 15:32:27] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 15:32:27] INFO [data.preprocess_data:434] Original dataset shape: (69823, 8)
+[2025-06-04 15:32:27] INFO [data.preprocess_data:440] Deduplicated columns: ['time', 'computer', 'user', 'workstationname', 'source_workstation', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:32:28] INFO [data.preprocess_data:488] Column 'workstationname' equals to columns ['source_workstation'] - keeping 'workstationname'
+[2025-06-04 15:32:28] INFO [data.preprocess_data:495] Dropped 1 duplicate columns
+[2025-06-04 15:32:28] INFO [data.preprocess_data:498] Columns dropped due to duplication: ['source_workstation']
+[2025-06-04 15:32:28] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:32:28] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 15:32:28] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 15:32:28] INFO [data.preprocess_data:523] Number of duplicate rows: 0
+[2025-06-04 15:32:28] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (69823, 7)
+[2025-06-04 15:32:28] INFO [data.preprocess_data:530] Final columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:32:28] INFO [data.process_and_load_csv:1015] Registering CSV file in database: data/FISHCM-NetworkLogon.csv
+[2025-06-04 15:32:28] INFO [data.process_and_load_csv:1034] Starting to save processed data to database
+[2025-06-04 15:32:28] INFO [data.save_processed_data_to_db:828] Creating new table: FISHCM_NetworkLogon
+[2025-06-04 15:32:28] INFO [data.save_processed_data_to_db:837] Saving data with 7 columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:32:28] INFO [data.save_processed_data_to_db:858] Dropped existing table: FISHCM_NetworkLogon
+[2025-06-04 15:32:28] INFO [data.save_processed_data_to_db:892] Column 'time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:32:28] INFO [data.save_processed_data_to_db:892] Column 'computer' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:32:29] INFO [data.save_processed_data_to_db:892] Column 'user' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 15:32:29] INFO [data.save_processed_data_to_db:892] Column 'workstationname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:32:29] INFO [data.save_processed_data_to_db:892] Column 'ipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:32:29] INFO [data.save_processed_data_to_db:892] Column 'name' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:32:29] INFO [data.save_processed_data_to_db:892] Column 'event_count' mapped to SQL type: BIGINT
+[2025-06-04 15:32:29] INFO [data.save_processed_data_to_db:904] Created new table: FISHCM_NetworkLogon
+[2025-06-04 15:32:29] INFO [data.save_processed_data_to_db:914] Starting bulk insert operation...
+[2025-06-04 15:32:29] INFO [data.bulk_insert_to_db:622] Starting bulk insert for table: FISHCM_NetworkLogon
+[2025-06-04 15:32:29] INFO [data.bulk_insert_to_db:627] Fetching table structure...
+[2025-06-04 15:32:29] INFO [data.bulk_insert_to_db:635] Found 9 columns in target table
+[2025-06-04 15:32:29] INFO [data.bulk_insert_to_db:660] Processed timestamp columns: ['time']
+[2025-06-04 15:32:29] INFO [data.bulk_insert_to_db:668] Creating temporary table structure...
+[2025-06-04 15:32:29] INFO [data.bulk_insert_to_db:693] Created temporary table: #temp_FISHCM_NetworkLogon
+[2025-06-04 15:32:37] INFO [data.bulk_insert_to_db:709] Prepared 69823 rows for insertion
+[2025-06-04 15:32:37] INFO [data.bulk_insert_to_db:718] Inserting batch 1/7 (10000 rows)
+[2025-06-04 15:32:37] INFO [data.bulk_insert_to_db:718] Inserting batch 2/7 (10000 rows)
+[2025-06-04 15:32:37] INFO [data.bulk_insert_to_db:718] Inserting batch 3/7 (10000 rows)
+[2025-06-04 15:32:38] INFO [data.bulk_insert_to_db:718] Inserting batch 4/7 (10000 rows)
+[2025-06-04 15:32:38] INFO [data.bulk_insert_to_db:718] Inserting batch 5/7 (10000 rows)
+[2025-06-04 15:32:38] INFO [data.bulk_insert_to_db:718] Inserting batch 6/7 (10000 rows)
+[2025-06-04 15:32:39] INFO [data.bulk_insert_to_db:718] Inserting batch 7/7 (9823 rows)
+[2025-06-04 15:32:39] INFO [data.bulk_insert_to_db:723] Copying data from temporary table to FISHCM_NetworkLogon
+[2025-06-04 15:32:40] INFO [data.bulk_insert_to_db:731] Bulk insert completed successfully in 10.53 seconds
+[2025-06-04 15:32:40] INFO [data.bulk_insert_to_db:742] Dropped temporary table: #temp_FISHCM_NetworkLogon
+[2025-06-04 15:32:40] INFO [data.save_processed_data_to_db:923] 
+Processing Time Summary:
+[2025-06-04 15:32:40] INFO [data.save_processed_data_to_db:930] table_preparation    0.00s        0.0%
+[2025-06-04 15:32:40] INFO [data.save_processed_data_to_db:930] table_drop           0.07s        0.6%
+[2025-06-04 15:32:40] INFO [data.save_processed_data_to_db:930] schema_creation      0.64s        5.6%
+[2025-06-04 15:32:40] INFO [data.save_processed_data_to_db:930] bulk_insert          10.64s       93.7%
+[2025-06-04 15:32:40] INFO [data.save_processed_data_to_db:934] Total time           11.35s      100.0%
+
+[2025-06-04 15:32:40] INFO [data.process_and_load_csv:1043] Successfully processed 69823 records into FISHCM_NetworkLogon
+[2025-06-04 15:32:40] INFO [data.process_and_load_csv:1044] Processing times: {'table_preparation': 0.0, 'table_drop': 0.07, 'schema_creation': 0.64, 'bulk_insert': 10.64, 'total_time': 11.35}
+[2025-06-04 15:32:40] INFO [data.load_data_endpoint:1103] Successfully processed CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 15:34:20] INFO [data.parse_request_params:1358] Parsing request parameters...
+[2025-06-04 15:34:20] INFO [data.parse_request_params:1362] Found JSON data in request
+[2025-06-04 15:34:20] INFO [data.parse_request_params:1369] Parsed parameters from JSON: file_path=data/FISHCM_AUTHENTICATION_CHECKPOINT.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:34:20] INFO [data.load_data_endpoint:1077] Data load request - file_path: data/FISHCM_AUTHENTICATION_CHECKPOINT.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 15:34:20] INFO [data.process_and_load_csv:979] Starting to process CSV file: data/FISHCM_AUTHENTICATION_CHECKPOINT.csv
+[2025-06-04 15:34:20] INFO [data.process_and_load_csv:980] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:34:20] ERROR [data.process_and_load_csv:985] CSV file data/FISHCM_AUTHENTICATION_CHECKPOINT.csv not found. Please check if the file exists.
+[2025-06-04 15:34:20] ERROR [data.load_data_endpoint:1091] Failed to process CSV file: CSV file data/FISHCM_AUTHENTICATION_CHECKPOINT.csv not found. Please check if the file exists.
+[2025-06-04 15:34:31] INFO [data.parse_request_params:1358] Parsing request parameters...
+[2025-06-04 15:34:31] INFO [data.parse_request_params:1362] Found JSON data in request
+[2025-06-04 15:34:31] INFO [data.parse_request_params:1369] Parsed parameters from JSON: file_path=data/FISHCM_AUTHENTICATE_CHECKPOINT.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:34:31] INFO [data.load_data_endpoint:1077] Data load request - file_path: data/FISHCM_AUTHENTICATE_CHECKPOINT.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 15:34:31] INFO [data.process_and_load_csv:979] Starting to process CSV file: data/FISHCM_AUTHENTICATE_CHECKPOINT.csv
+[2025-06-04 15:34:31] INFO [data.process_and_load_csv:980] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:34:31] INFO [data.process_and_load_csv:995] Preprocessing CSV file: data/FISHCM_AUTHENTICATE_CHECKPOINT.csv
+[2025-06-04 15:34:31] INFO [data.preprocess_data:405] Small file detected (0.18 MB). Processing normally...
+[2025-06-04 15:34:31] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 15:34:31] INFO [data.preprocess_data:434] Original dataset shape: (1770, 6)
+[2025-06-04 15:34:31] INFO [data.preprocess_data:440] Deduplicated columns: ['_time', 'targetusername', 'ipaddress', 'ipport', 'status', 'signature']
+[2025-06-04 15:34:31] INFO [data.preprocess_data:448] Dropped 3 columns with no variance
+[2025-06-04 15:34:31] INFO [data.preprocess_data:451] Columns dropped due to no variance: ['ipaddress', 'status', 'signature']
+[2025-06-04 15:34:31] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:34:31] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 15:34:31] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 15:34:31] INFO [data.preprocess_data:523] Number of duplicate rows: 0
+[2025-06-04 15:34:31] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (1770, 3)
+[2025-06-04 15:34:31] INFO [data.preprocess_data:530] Final columns: ['_time', 'targetusername', 'ipport']
+[2025-06-04 15:34:31] INFO [data.process_and_load_csv:1015] Registering CSV file in database: data/FISHCM_AUTHENTICATE_CHECKPOINT.csv
+[2025-06-04 15:34:31] INFO [data.process_and_load_csv:1034] Starting to save processed data to database
+[2025-06-04 15:34:31] INFO [data.save_processed_data_to_db:828] Creating new table: FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 15:34:31] INFO [data.save_processed_data_to_db:837] Saving data with 3 columns: ['_time', 'targetusername', 'ipport']
+[2025-06-04 15:34:31] INFO [data.save_processed_data_to_db:858] Dropped existing table: FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 15:34:31] INFO [data.save_processed_data_to_db:892] Column '_time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:34:31] INFO [data.save_processed_data_to_db:892] Column 'targetusername' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:34:31] INFO [data.save_processed_data_to_db:892] Column 'ipport' mapped to SQL type: BIGINT
+[2025-06-04 15:34:31] INFO [data.save_processed_data_to_db:904] Created new table: FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 15:34:31] INFO [data.save_processed_data_to_db:914] Starting bulk insert operation...
+[2025-06-04 15:34:31] INFO [data.bulk_insert_to_db:622] Starting bulk insert for table: FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 15:34:31] INFO [data.bulk_insert_to_db:627] Fetching table structure...
+[2025-06-04 15:34:31] INFO [data.bulk_insert_to_db:635] Found 5 columns in target table
+[2025-06-04 15:34:31] INFO [data.bulk_insert_to_db:660] Processed timestamp columns: ['_time']
+[2025-06-04 15:34:31] INFO [data.bulk_insert_to_db:668] Creating temporary table structure...
+[2025-06-04 15:34:31] INFO [data.bulk_insert_to_db:693] Created temporary table: #temp_FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 15:34:32] INFO [data.bulk_insert_to_db:709] Prepared 1770 rows for insertion
+[2025-06-04 15:34:32] INFO [data.bulk_insert_to_db:718] Inserting batch 1/1 (1770 rows)
+[2025-06-04 15:34:32] INFO [data.bulk_insert_to_db:723] Copying data from temporary table to FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 15:34:32] INFO [data.bulk_insert_to_db:731] Bulk insert completed successfully in 0.43 seconds
+[2025-06-04 15:34:32] INFO [data.bulk_insert_to_db:742] Dropped temporary table: #temp_FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 15:34:32] INFO [data.save_processed_data_to_db:923] 
+Processing Time Summary:
+[2025-06-04 15:34:32] INFO [data.save_processed_data_to_db:930] table_preparation    0.00s        0.2%
+[2025-06-04 15:34:32] INFO [data.save_processed_data_to_db:930] table_drop           0.05s        9.4%
+[2025-06-04 15:34:32] INFO [data.save_processed_data_to_db:930] schema_creation      0.01s        1.7%
+[2025-06-04 15:34:32] INFO [data.save_processed_data_to_db:930] bulk_insert          0.44s       88.3%
+[2025-06-04 15:34:32] INFO [data.save_processed_data_to_db:934] Total time           0.49s      100.0%
+
+[2025-06-04 15:34:32] INFO [data.process_and_load_csv:1043] Successfully processed 1770 records into FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 15:34:32] INFO [data.process_and_load_csv:1044] Processing times: {'table_preparation': 0.0, 'table_drop': 0.05, 'schema_creation': 0.01, 'bulk_insert': 0.44, 'total_time': 0.49}
+[2025-06-04 15:34:32] INFO [data.load_data_endpoint:1103] Successfully processed CSV file: data/FISHCM_AUTHENTICATE_CHECKPOINT.csv
+[2025-06-04 15:34:59] INFO [data.parse_request_params:1358] Parsing request parameters...
+[2025-06-04 15:34:59] INFO [data.parse_request_params:1362] Found JSON data in request
+[2025-06-04 15:34:59] INFO [data.parse_request_params:1369] Parsed parameters from JSON: file_path=data/FISHCM_FILESERV_LOGIN.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:34:59] INFO [data.load_data_endpoint:1077] Data load request - file_path: data/FISHCM_FILESERV_LOGIN.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 15:34:59] INFO [data.process_and_load_csv:979] Starting to process CSV file: data/FISHCM_FILESERV_LOGIN.csv
+[2025-06-04 15:34:59] INFO [data.process_and_load_csv:980] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:34:59] INFO [data.process_and_load_csv:995] Preprocessing CSV file: data/FISHCM_FILESERV_LOGIN.csv
+[2025-06-04 15:34:59] INFO [data.preprocess_data:405] Small file detected (7.76 MB). Processing normally...
+[2025-06-04 15:34:59] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 15:34:59] INFO [data.preprocess_data:434] Original dataset shape: (54886, 8)
+[2025-06-04 15:34:59] INFO [data.preprocess_data:440] Deduplicated columns: ['_time', 'computer', 'user', 'workstationname', 'source_workstation', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:35:00] INFO [data.preprocess_data:488] Column 'workstationname' equals to columns ['source_workstation'] - keeping 'workstationname'
+[2025-06-04 15:35:00] INFO [data.preprocess_data:495] Dropped 1 duplicate columns
+[2025-06-04 15:35:00] INFO [data.preprocess_data:498] Columns dropped due to duplication: ['source_workstation']
+[2025-06-04 15:35:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:35:00] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 15:35:00] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 15:35:00] INFO [data.preprocess_data:523] Number of duplicate rows: 0
+[2025-06-04 15:35:00] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (54886, 7)
+[2025-06-04 15:35:00] INFO [data.preprocess_data:530] Final columns: ['_time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:35:00] INFO [data.process_and_load_csv:1015] Registering CSV file in database: data/FISHCM_FILESERV_LOGIN.csv
+[2025-06-04 15:35:01] INFO [data.process_and_load_csv:1034] Starting to save processed data to database
+[2025-06-04 15:35:01] INFO [data.save_processed_data_to_db:828] Creating new table: FISHCM_FILESERV_LOGIN
+[2025-06-04 15:35:01] INFO [data.save_processed_data_to_db:837] Saving data with 7 columns: ['_time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:35:01] INFO [data.save_processed_data_to_db:858] Dropped existing table: FISHCM_FILESERV_LOGIN
+[2025-06-04 15:35:01] INFO [data.save_processed_data_to_db:892] Column '_time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:35:01] INFO [data.save_processed_data_to_db:892] Column 'computer' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:35:01] INFO [data.save_processed_data_to_db:892] Column 'user' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 15:35:01] INFO [data.save_processed_data_to_db:892] Column 'workstationname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:35:01] INFO [data.save_processed_data_to_db:892] Column 'ipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:35:01] INFO [data.save_processed_data_to_db:892] Column 'name' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:35:01] INFO [data.save_processed_data_to_db:892] Column 'event_count' mapped to SQL type: BIGINT
+[2025-06-04 15:35:02] INFO [data.save_processed_data_to_db:904] Created new table: FISHCM_FILESERV_LOGIN
+[2025-06-04 15:35:02] INFO [data.save_processed_data_to_db:914] Starting bulk insert operation...
+[2025-06-04 15:35:02] INFO [data.bulk_insert_to_db:622] Starting bulk insert for table: FISHCM_FILESERV_LOGIN
+[2025-06-04 15:35:02] INFO [data.bulk_insert_to_db:627] Fetching table structure...
+[2025-06-04 15:35:02] INFO [data.bulk_insert_to_db:635] Found 9 columns in target table
+[2025-06-04 15:35:02] INFO [data.bulk_insert_to_db:660] Processed timestamp columns: ['_time']
+[2025-06-04 15:35:02] INFO [data.bulk_insert_to_db:668] Creating temporary table structure...
+[2025-06-04 15:35:02] INFO [data.bulk_insert_to_db:693] Created temporary table: #temp_FISHCM_FILESERV_LOGIN
+[2025-06-04 15:35:08] INFO [data.bulk_insert_to_db:709] Prepared 54886 rows for insertion
+[2025-06-04 15:35:08] INFO [data.bulk_insert_to_db:718] Inserting batch 1/6 (10000 rows)
+[2025-06-04 15:35:08] INFO [data.bulk_insert_to_db:718] Inserting batch 2/6 (10000 rows)
+[2025-06-04 15:35:09] INFO [data.bulk_insert_to_db:718] Inserting batch 3/6 (10000 rows)
+[2025-06-04 15:35:09] INFO [data.bulk_insert_to_db:718] Inserting batch 4/6 (10000 rows)
+[2025-06-04 15:35:09] INFO [data.bulk_insert_to_db:718] Inserting batch 5/6 (10000 rows)
+[2025-06-04 15:35:09] INFO [data.bulk_insert_to_db:718] Inserting batch 6/6 (4886 rows)
+[2025-06-04 15:35:10] INFO [data.bulk_insert_to_db:723] Copying data from temporary table to FISHCM_FILESERV_LOGIN
+[2025-06-04 15:35:10] INFO [data.bulk_insert_to_db:731] Bulk insert completed successfully in 8.22 seconds
+[2025-06-04 15:35:10] INFO [data.bulk_insert_to_db:742] Dropped temporary table: #temp_FISHCM_FILESERV_LOGIN
+[2025-06-04 15:35:10] INFO [data.save_processed_data_to_db:923] 
+Processing Time Summary:
+[2025-06-04 15:35:10] INFO [data.save_processed_data_to_db:930] table_preparation    0.01s        0.1%
+[2025-06-04 15:35:10] INFO [data.save_processed_data_to_db:930] table_drop           0.05s        0.6%
+[2025-06-04 15:35:10] INFO [data.save_processed_data_to_db:930] schema_creation      0.99s       10.6%
+[2025-06-04 15:35:10] INFO [data.save_processed_data_to_db:930] bulk_insert          8.24s       88.7%
+[2025-06-04 15:35:10] INFO [data.save_processed_data_to_db:934] Total time           9.29s      100.0%
+
+[2025-06-04 15:35:10] INFO [data.process_and_load_csv:1043] Successfully processed 54886 records into FISHCM_FILESERV_LOGIN
+[2025-06-04 15:35:10] INFO [data.process_and_load_csv:1044] Processing times: {'table_preparation': 0.01, 'table_drop': 0.05, 'schema_creation': 0.99, 'bulk_insert': 8.24, 'total_time': 9.29}
+[2025-06-04 15:35:10] INFO [data.load_data_endpoint:1103] Successfully processed CSV file: data/FISHCM_FILESERV_LOGIN.csv
+[2025-06-04 15:35:27] INFO [data.parse_request_params:1358] Parsing request parameters...
+[2025-06-04 15:35:27] INFO [data.parse_request_params:1362] Found JSON data in request
+[2025-06-04 15:35:27] INFO [data.parse_request_params:1369] Parsed parameters from JSON: file_path=data/FISHCM_VPN_ALERT.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:35:27] INFO [data.load_data_endpoint:1077] Data load request - file_path: data/FISHCM_VPN_ALERT.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 15:35:27] INFO [data.process_and_load_csv:979] Starting to process CSV file: data/FISHCM_VPN_ALERT.csv
+[2025-06-04 15:35:27] INFO [data.process_and_load_csv:980] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:35:27] INFO [data.process_and_load_csv:995] Preprocessing CSV file: data/FISHCM_VPN_ALERT.csv
+[2025-06-04 15:35:27] INFO [data.preprocess_data:405] Small file detected (15.86 MB). Processing normally...
+[2025-06-04 15:35:27] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 15:35:28] INFO [data.preprocess_data:434] Original dataset shape: (80673, 11)
+[2025-06-04 15:35:28] INFO [data.preprocess_data:440] Deduplicated columns: ['_time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid', 'proxypolicyname', 'authenticationserver', 'authenticationtype']
+[2025-06-04 15:35:28] INFO [data.preprocess_data:448] Dropped 3 columns with no variance
+[2025-06-04 15:35:28] INFO [data.preprocess_data:451] Columns dropped due to no variance: ['proxypolicyname', 'authenticationserver', 'authenticationtype']
+[2025-06-04 15:35:29] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:35:29] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 15:35:29] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 15:35:29] INFO [data.preprocess_data:523] Number of duplicate rows: 10
+[2025-06-04 15:35:29] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (80673, 8)
+[2025-06-04 15:35:29] INFO [data.preprocess_data:530] Final columns: ['_time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid']
+[2025-06-04 15:35:29] INFO [data.process_and_load_csv:1015] Registering CSV file in database: data/FISHCM_VPN_ALERT.csv
+[2025-06-04 15:35:29] INFO [data.process_and_load_csv:1034] Starting to save processed data to database
+[2025-06-04 15:35:29] INFO [data.save_processed_data_to_db:828] Creating new table: FISHCM_VPN_ALERT
+[2025-06-04 15:35:29] INFO [data.save_processed_data_to_db:837] Saving data with 8 columns: ['_time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid']
+[2025-06-04 15:35:29] INFO [data.save_processed_data_to_db:858] Dropped existing table: FISHCM_VPN_ALERT
+[2025-06-04 15:35:29] INFO [data.save_processed_data_to_db:892] Column '_time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:35:29] INFO [data.save_processed_data_to_db:892] Column 'src_user' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:35:29] INFO [data.save_processed_data_to_db:892] Column 'fullyqualifiedsubjectusername' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 15:35:29] INFO [data.save_processed_data_to_db:892] Column 'clientname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:35:29] INFO [data.save_processed_data_to_db:892] Column 'clientipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:35:29] INFO [data.save_processed_data_to_db:892] Column 'nasidentifier' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:35:29] INFO [data.save_processed_data_to_db:892] Column 'nasport' mapped to SQL type: BIGINT
+[2025-06-04 15:35:30] INFO [data.save_processed_data_to_db:892] Column 'callingstationid' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:35:30] INFO [data.save_processed_data_to_db:904] Created new table: FISHCM_VPN_ALERT
+[2025-06-04 15:35:30] INFO [data.save_processed_data_to_db:914] Starting bulk insert operation...
+[2025-06-04 15:35:30] INFO [data.bulk_insert_to_db:622] Starting bulk insert for table: FISHCM_VPN_ALERT
+[2025-06-04 15:35:30] INFO [data.bulk_insert_to_db:627] Fetching table structure...
+[2025-06-04 15:35:30] INFO [data.bulk_insert_to_db:635] Found 10 columns in target table
+[2025-06-04 15:35:31] INFO [data.bulk_insert_to_db:660] Processed timestamp columns: ['_time']
+[2025-06-04 15:35:31] INFO [data.bulk_insert_to_db:668] Creating temporary table structure...
+[2025-06-04 15:35:31] INFO [data.bulk_insert_to_db:693] Created temporary table: #temp_FISHCM_VPN_ALERT
+[2025-06-04 15:35:40] INFO [data.bulk_insert_to_db:709] Prepared 80673 rows for insertion
+[2025-06-04 15:35:40] INFO [data.bulk_insert_to_db:718] Inserting batch 1/9 (10000 rows)
+[2025-06-04 15:35:40] INFO [data.bulk_insert_to_db:718] Inserting batch 2/9 (10000 rows)
+[2025-06-04 15:35:40] INFO [data.bulk_insert_to_db:718] Inserting batch 3/9 (10000 rows)
+[2025-06-04 15:35:41] INFO [data.bulk_insert_to_db:718] Inserting batch 4/9 (10000 rows)
+[2025-06-04 15:35:41] INFO [data.bulk_insert_to_db:718] Inserting batch 5/9 (10000 rows)
+[2025-06-04 15:35:41] INFO [data.bulk_insert_to_db:718] Inserting batch 6/9 (10000 rows)
+[2025-06-04 15:35:42] INFO [data.bulk_insert_to_db:718] Inserting batch 7/9 (10000 rows)
+[2025-06-04 15:35:42] INFO [data.bulk_insert_to_db:718] Inserting batch 8/9 (10000 rows)
+[2025-06-04 15:35:42] INFO [data.bulk_insert_to_db:718] Inserting batch 9/9 (673 rows)
+[2025-06-04 15:35:42] INFO [data.bulk_insert_to_db:723] Copying data from temporary table to FISHCM_VPN_ALERT
+[2025-06-04 15:35:43] INFO [data.bulk_insert_to_db:731] Bulk insert completed successfully in 13.26 seconds
+[2025-06-04 15:35:43] INFO [data.bulk_insert_to_db:742] Dropped temporary table: #temp_FISHCM_VPN_ALERT
+[2025-06-04 15:35:43] INFO [data.save_processed_data_to_db:923] 
+Processing Time Summary:
+[2025-06-04 15:35:43] INFO [data.save_processed_data_to_db:930] table_preparation    0.00s        0.0%
+[2025-06-04 15:35:43] INFO [data.save_processed_data_to_db:930] table_drop           0.08s        0.6%
+[2025-06-04 15:35:43] INFO [data.save_processed_data_to_db:930] schema_creation      0.51s        3.7%
+[2025-06-04 15:35:43] INFO [data.save_processed_data_to_db:930] bulk_insert          13.28s       95.8%
+[2025-06-04 15:35:43] INFO [data.save_processed_data_to_db:934] Total time           13.87s      100.0%
+
+[2025-06-04 15:35:43] INFO [data.process_and_load_csv:1043] Successfully processed 80673 records into FISHCM_VPN_ALERT
+[2025-06-04 15:35:43] INFO [data.process_and_load_csv:1044] Processing times: {'table_preparation': 0.0, 'table_drop': 0.08, 'schema_creation': 0.51, 'bulk_insert': 13.28, 'total_time': 13.87}
+[2025-06-04 15:35:43] INFO [data.load_data_endpoint:1103] Successfully processed CSV file: data/FISHCM_VPN_ALERT.csv
+[2025-06-04 15:36:05] INFO [data.parse_request_params:1358] Parsing request parameters...
+[2025-06-04 15:36:05] INFO [data.parse_request_params:1362] Found JSON data in request
+[2025-06-04 15:36:05] INFO [data.parse_request_params:1369] Parsed parameters from JSON: file_path=data/FISHCM_VPN_Unsuccessful.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:36:05] INFO [data.load_data_endpoint:1077] Data load request - file_path: data/FISHCM_VPN_Unsuccessful.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 15:36:05] INFO [data.process_and_load_csv:979] Starting to process CSV file: data/FISHCM_VPN_Unsuccessful.csv
+[2025-06-04 15:36:05] INFO [data.process_and_load_csv:980] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:36:05] INFO [data.process_and_load_csv:995] Preprocessing CSV file: data/FISHCM_VPN_Unsuccessful.csv
+[2025-06-04 15:36:05] INFO [data.preprocess_data:405] Small file detected (4.17 MB). Processing normally...
+[2025-06-04 15:36:05] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 15:36:05] INFO [data.preprocess_data:434] Original dataset shape: (14136, 12)
+[2025-06-04 15:36:05] INFO [data.preprocess_data:440] Deduplicated columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid', 'authenticationserver', 'authenticationtype', 'status', 'reason']
+[2025-06-04 15:36:05] INFO [data.preprocess_data:448] Dropped 2 columns with no variance
+[2025-06-04 15:36:05] INFO [data.preprocess_data:451] Columns dropped due to no variance: ['authenticationserver', 'status']
+[2025-06-04 15:36:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:06] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 15:36:06] INFO [data.preprocess_data:517] 
+src_user    1
+dtype: int64
+[2025-06-04 15:36:06] INFO [data.preprocess_data:523] Number of duplicate rows: 2826
+[2025-06-04 15:36:06] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (14136, 10)
+[2025-06-04 15:36:06] INFO [data.preprocess_data:530] Final columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid', 'authenticationtype', 'reason']
+[2025-06-04 15:36:06] INFO [data.process_and_load_csv:1015] Registering CSV file in database: data/FISHCM_VPN_Unsuccessful.csv
+[2025-06-04 15:36:06] INFO [data.process_and_load_csv:1034] Starting to save processed data to database
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:828] Creating new table: FISHCM_VPN_Unsuccessful
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:837] Saving data with 10 columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid', 'authenticationtype', 'reason']
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:858] Dropped existing table: FISHCM_VPN_Unsuccessful
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:892] Column 'time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:892] Column 'src_user' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:892] Column 'fullyqualifiedsubjectusername' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:892] Column 'clientname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:892] Column 'clientipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:892] Column 'nasidentifier' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:892] Column 'nasport' mapped to SQL type: BIGINT
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:892] Column 'callingstationid' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:892] Column 'authenticationtype' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:892] Column 'reason' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:904] Created new table: FISHCM_VPN_Unsuccessful
+[2025-06-04 15:36:06] INFO [data.save_processed_data_to_db:914] Starting bulk insert operation...
+[2025-06-04 15:36:06] INFO [data.bulk_insert_to_db:622] Starting bulk insert for table: FISHCM_VPN_Unsuccessful
+[2025-06-04 15:36:06] INFO [data.bulk_insert_to_db:627] Fetching table structure...
+[2025-06-04 15:36:06] INFO [data.bulk_insert_to_db:635] Found 12 columns in target table
+[2025-06-04 15:36:06] INFO [data.bulk_insert_to_db:660] Processed timestamp columns: ['time']
+[2025-06-04 15:36:06] INFO [data.bulk_insert_to_db:668] Creating temporary table structure...
+[2025-06-04 15:36:06] INFO [data.bulk_insert_to_db:693] Created temporary table: #temp_FISHCM_VPN_Unsuccessful
+[2025-06-04 15:36:08] INFO [data.bulk_insert_to_db:709] Prepared 14136 rows for insertion
+[2025-06-04 15:36:08] INFO [data.bulk_insert_to_db:718] Inserting batch 1/2 (10000 rows)
+[2025-06-04 15:36:09] INFO [data.bulk_insert_to_db:718] Inserting batch 2/2 (4136 rows)
+[2025-06-04 15:36:09] INFO [data.bulk_insert_to_db:723] Copying data from temporary table to FISHCM_VPN_Unsuccessful
+[2025-06-04 15:36:09] INFO [data.bulk_insert_to_db:731] Bulk insert completed successfully in 2.64 seconds
+[2025-06-04 15:36:09] INFO [data.bulk_insert_to_db:742] Dropped temporary table: #temp_FISHCM_VPN_Unsuccessful
+[2025-06-04 15:36:09] INFO [data.save_processed_data_to_db:923] 
+Processing Time Summary:
+[2025-06-04 15:36:09] INFO [data.save_processed_data_to_db:930] table_preparation    0.00s        0.1%
+[2025-06-04 15:36:09] INFO [data.save_processed_data_to_db:930] table_drop           0.05s        1.7%
+[2025-06-04 15:36:09] INFO [data.save_processed_data_to_db:930] schema_creation      0.26s        8.6%
+[2025-06-04 15:36:09] INFO [data.save_processed_data_to_db:930] bulk_insert          2.65s       89.5%
+[2025-06-04 15:36:09] INFO [data.save_processed_data_to_db:934] Total time           2.96s      100.0%
+
+[2025-06-04 15:36:09] INFO [data.process_and_load_csv:1043] Successfully processed 14136 records into FISHCM_VPN_Unsuccessful
+[2025-06-04 15:36:09] INFO [data.process_and_load_csv:1044] Processing times: {'table_preparation': 0.0, 'table_drop': 0.05, 'schema_creation': 0.26, 'bulk_insert': 2.65, 'total_time': 2.96}
+[2025-06-04 15:36:09] INFO [data.load_data_endpoint:1103] Successfully processed CSV file: data/FISHCM_VPN_Unsuccessful.csv
+[2025-06-04 15:36:46] INFO [data.parse_request_params:1358] Parsing request parameters...
+[2025-06-04 15:36:46] INFO [data.parse_request_params:1362] Found JSON data in request
+[2025-06-04 15:36:46] INFO [data.parse_request_params:1369] Parsed parameters from JSON: file_path=data/FISHCM_Wifi_All_Login.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:36:46] INFO [data.load_data_endpoint:1077] Data load request - file_path: data/FISHCM_Wifi_All_Login.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 15:36:46] INFO [data.process_and_load_csv:979] Starting to process CSV file: data/FISHCM_Wifi_All_Login.csv
+[2025-06-04 15:36:46] INFO [data.process_and_load_csv:980] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:36:46] INFO [data.process_and_load_csv:995] Preprocessing CSV file: data/FISHCM_Wifi_All_Login.csv
+[2025-06-04 15:36:46] INFO [data.preprocess_data:400] Large file detected (215.37 MB). Using parallel processing...
+[2025-06-04 15:36:46] INFO [data.process_in_parallel:326] Starting parallel processing with 4 workers
+[2025-06-04 15:36:46] INFO [data.process_in_parallel:332] Detected delimiter: ','
+[2025-06-04 15:36:52] INFO [data.process_in_parallel:337] Total chunks to process: 1 (105 rows)
+[2025-06-04 15:36:55] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:55] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:55] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:57] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:57] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:57] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:57] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:36:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:01] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:01] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:01] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:01] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:01] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:03] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:03] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:03] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:03] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:03] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:04] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:04] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:04] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:04] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:04] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:04] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:07] INFO [data.process_in_parallel:354] Successfully processed chunk 1/105
+[2025-06-04 15:37:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:07] INFO [data.process_in_parallel:354] Successfully processed chunk 2/105
+[2025-06-04 15:37:08] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 3/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 4/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 5/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 6/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 7/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 8/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 9/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 10/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 11/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 12/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 13/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 14/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 15/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 16/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 17/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 18/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 19/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 20/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 21/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 22/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 23/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 24/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 25/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 26/105
+[2025-06-04 15:37:08] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 27/105
+[2025-06-04 15:37:08] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:08] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 28/105
+[2025-06-04 15:37:08] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 29/105
+[2025-06-04 15:37:08] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:08] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 30/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 31/105
+[2025-06-04 15:37:08] INFO [data.process_in_parallel:354] Successfully processed chunk 32/105
+[2025-06-04 15:37:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:09] INFO [data.process_in_parallel:354] Successfully processed chunk 33/105
+[2025-06-04 15:37:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:09] INFO [data.process_in_parallel:354] Successfully processed chunk 34/105
+[2025-06-04 15:37:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:09] INFO [data.process_in_parallel:354] Successfully processed chunk 35/105
+[2025-06-04 15:37:09] INFO [data.process_in_parallel:354] Successfully processed chunk 36/105
+[2025-06-04 15:37:09] INFO [data.process_in_parallel:354] Successfully processed chunk 37/105
+[2025-06-04 15:37:09] INFO [data.process_in_parallel:354] Successfully processed chunk 38/105
+[2025-06-04 15:37:09] INFO [data.process_in_parallel:354] Successfully processed chunk 39/105
+[2025-06-04 15:37:09] INFO [data.process_in_parallel:354] Successfully processed chunk 40/105
+[2025-06-04 15:37:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 41/105
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 42/105
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 43/105
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 44/105
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 45/105
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 46/105
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 47/105
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 48/105
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 49/105
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 50/105
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 51/105
+[2025-06-04 15:37:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:10] INFO [data.process_in_parallel:354] Successfully processed chunk 52/105
+[2025-06-04 15:37:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 53/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 54/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 55/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 56/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 57/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 58/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 59/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 60/105
+[2025-06-04 15:37:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 61/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 62/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 63/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 64/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 65/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 66/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 67/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 68/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 69/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 70/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 71/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 72/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 73/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 74/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 75/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 76/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 77/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 78/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 79/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 80/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 81/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 82/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 83/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 84/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 85/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 86/105
+[2025-06-04 15:37:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 87/105
+[2025-06-04 15:37:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 88/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 89/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 90/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 91/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 92/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 93/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 94/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 95/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 96/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 97/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 98/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 99/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 100/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 101/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 102/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 103/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 104/105
+[2025-06-04 15:37:11] INFO [data.process_in_parallel:354] Successfully processed chunk 105/105
+[2025-06-04 15:37:12] INFO [data.process_in_parallel:366] Combining processed chunks...
+[2025-06-04 15:37:14] INFO [data.process_in_parallel:373] Removed 2814 duplicate rows from final dataset
+[2025-06-04 15:37:14] INFO [data.process_and_load_csv:1015] Registering CSV file in database: data/FISHCM_Wifi_All_Login.csv
+[2025-06-04 15:37:14] INFO [data.process_and_load_csv:1034] Starting to save processed data to database
+[2025-06-04 15:37:14] INFO [data.save_processed_data_to_db:828] Creating new table: FISHCM_Wifi_All_Login
+[2025-06-04 15:37:14] INFO [data.save_processed_data_to_db:837] Saving data with 8 columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid']
+[2025-06-04 15:37:14] INFO [data.save_processed_data_to_db:858] Dropped existing table: FISHCM_Wifi_All_Login
+[2025-06-04 15:37:15] INFO [data.save_processed_data_to_db:892] Column 'time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:37:15] INFO [data.save_processed_data_to_db:892] Column 'src_user' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:37:16] INFO [data.save_processed_data_to_db:892] Column 'fullyqualifiedsubjectusername' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 15:37:16] INFO [data.save_processed_data_to_db:892] Column 'clientname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:37:16] INFO [data.save_processed_data_to_db:892] Column 'clientipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:37:17] INFO [data.save_processed_data_to_db:892] Column 'nasidentifier' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:37:17] INFO [data.save_processed_data_to_db:892] Column 'nasport' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:37:18] INFO [data.save_processed_data_to_db:892] Column 'callingstationid' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:37:18] INFO [data.save_processed_data_to_db:904] Created new table: FISHCM_Wifi_All_Login
+[2025-06-04 15:37:18] INFO [data.save_processed_data_to_db:914] Starting bulk insert operation...
+[2025-06-04 15:37:18] INFO [data.bulk_insert_to_db:622] Starting bulk insert for table: FISHCM_Wifi_All_Login
+[2025-06-04 15:37:18] INFO [data.bulk_insert_to_db:627] Fetching table structure...
+[2025-06-04 15:37:18] INFO [data.bulk_insert_to_db:635] Found 10 columns in target table
+[2025-06-04 15:37:31] INFO [data.bulk_insert_to_db:660] Processed timestamp columns: ['time']
+[2025-06-04 15:37:31] INFO [data.bulk_insert_to_db:668] Creating temporary table structure...
+[2025-06-04 15:37:31] INFO [data.bulk_insert_to_db:693] Created temporary table: #temp_FISHCM_Wifi_All_Login
+[2025-06-04 15:39:22] INFO [data.bulk_insert_to_db:709] Prepared 1045761 rows for insertion
+[2025-06-04 15:39:22] INFO [data.bulk_insert_to_db:718] Inserting batch 1/105 (10000 rows)
+[2025-06-04 15:39:22] INFO [data.bulk_insert_to_db:718] Inserting batch 2/105 (10000 rows)
+[2025-06-04 15:39:22] INFO [data.bulk_insert_to_db:718] Inserting batch 3/105 (10000 rows)
+[2025-06-04 15:39:23] INFO [data.bulk_insert_to_db:718] Inserting batch 4/105 (10000 rows)
+[2025-06-04 15:39:23] INFO [data.bulk_insert_to_db:718] Inserting batch 5/105 (10000 rows)
+[2025-06-04 15:39:23] INFO [data.bulk_insert_to_db:718] Inserting batch 6/105 (10000 rows)
+[2025-06-04 15:39:24] INFO [data.bulk_insert_to_db:718] Inserting batch 7/105 (10000 rows)
+[2025-06-04 15:39:24] INFO [data.bulk_insert_to_db:718] Inserting batch 8/105 (10000 rows)
+[2025-06-04 15:39:24] INFO [data.bulk_insert_to_db:718] Inserting batch 9/105 (10000 rows)
+[2025-06-04 15:39:25] INFO [data.bulk_insert_to_db:718] Inserting batch 10/105 (10000 rows)
+[2025-06-04 15:39:25] INFO [data.bulk_insert_to_db:718] Inserting batch 11/105 (10000 rows)
+[2025-06-04 15:39:25] INFO [data.bulk_insert_to_db:718] Inserting batch 12/105 (10000 rows)
+[2025-06-04 15:39:26] INFO [data.bulk_insert_to_db:718] Inserting batch 13/105 (10000 rows)
+[2025-06-04 15:39:26] INFO [data.bulk_insert_to_db:718] Inserting batch 14/105 (10000 rows)
+[2025-06-04 15:39:26] INFO [data.bulk_insert_to_db:718] Inserting batch 15/105 (10000 rows)
+[2025-06-04 15:39:27] INFO [data.bulk_insert_to_db:718] Inserting batch 16/105 (10000 rows)
+[2025-06-04 15:39:27] INFO [data.bulk_insert_to_db:718] Inserting batch 17/105 (10000 rows)
+[2025-06-04 15:39:27] INFO [data.bulk_insert_to_db:718] Inserting batch 18/105 (10000 rows)
+[2025-06-04 15:39:28] INFO [data.bulk_insert_to_db:718] Inserting batch 19/105 (10000 rows)
+[2025-06-04 15:39:28] INFO [data.bulk_insert_to_db:718] Inserting batch 20/105 (10000 rows)
+[2025-06-04 15:39:29] INFO [data.bulk_insert_to_db:718] Inserting batch 21/105 (10000 rows)
+[2025-06-04 15:39:29] INFO [data.bulk_insert_to_db:718] Inserting batch 22/105 (10000 rows)
+[2025-06-04 15:39:29] INFO [data.bulk_insert_to_db:718] Inserting batch 23/105 (10000 rows)
+[2025-06-04 15:39:30] INFO [data.bulk_insert_to_db:718] Inserting batch 24/105 (10000 rows)
+[2025-06-04 15:39:30] INFO [data.bulk_insert_to_db:718] Inserting batch 25/105 (10000 rows)
+[2025-06-04 15:39:30] INFO [data.bulk_insert_to_db:718] Inserting batch 26/105 (10000 rows)
+[2025-06-04 15:39:31] INFO [data.bulk_insert_to_db:718] Inserting batch 27/105 (10000 rows)
+[2025-06-04 15:39:31] INFO [data.bulk_insert_to_db:718] Inserting batch 28/105 (10000 rows)
+[2025-06-04 15:39:31] INFO [data.bulk_insert_to_db:718] Inserting batch 29/105 (10000 rows)
+[2025-06-04 15:39:32] INFO [data.bulk_insert_to_db:718] Inserting batch 30/105 (10000 rows)
+[2025-06-04 15:39:32] INFO [data.bulk_insert_to_db:718] Inserting batch 31/105 (10000 rows)
+[2025-06-04 15:39:32] INFO [data.bulk_insert_to_db:718] Inserting batch 32/105 (10000 rows)
+[2025-06-04 15:39:33] INFO [data.bulk_insert_to_db:718] Inserting batch 33/105 (10000 rows)
+[2025-06-04 15:39:33] INFO [data.bulk_insert_to_db:718] Inserting batch 34/105 (10000 rows)
+[2025-06-04 15:39:33] INFO [data.bulk_insert_to_db:718] Inserting batch 35/105 (10000 rows)
+[2025-06-04 15:39:34] INFO [data.bulk_insert_to_db:718] Inserting batch 36/105 (10000 rows)
+[2025-06-04 15:39:34] INFO [data.bulk_insert_to_db:718] Inserting batch 37/105 (10000 rows)
+[2025-06-04 15:39:34] INFO [data.bulk_insert_to_db:718] Inserting batch 38/105 (10000 rows)
+[2025-06-04 15:39:35] INFO [data.bulk_insert_to_db:718] Inserting batch 39/105 (10000 rows)
+[2025-06-04 15:39:35] INFO [data.bulk_insert_to_db:718] Inserting batch 40/105 (10000 rows)
+[2025-06-04 15:39:35] INFO [data.bulk_insert_to_db:718] Inserting batch 41/105 (10000 rows)
+[2025-06-04 15:39:36] INFO [data.bulk_insert_to_db:718] Inserting batch 42/105 (10000 rows)
+[2025-06-04 15:39:36] INFO [data.bulk_insert_to_db:718] Inserting batch 43/105 (10000 rows)
+[2025-06-04 15:39:36] INFO [data.bulk_insert_to_db:718] Inserting batch 44/105 (10000 rows)
+[2025-06-04 15:39:37] INFO [data.bulk_insert_to_db:718] Inserting batch 45/105 (10000 rows)
+[2025-06-04 15:39:37] INFO [data.bulk_insert_to_db:718] Inserting batch 46/105 (10000 rows)
+[2025-06-04 15:39:38] INFO [data.bulk_insert_to_db:718] Inserting batch 47/105 (10000 rows)
+[2025-06-04 15:39:38] INFO [data.bulk_insert_to_db:718] Inserting batch 48/105 (10000 rows)
+[2025-06-04 15:39:39] INFO [data.bulk_insert_to_db:718] Inserting batch 49/105 (10000 rows)
+[2025-06-04 15:39:39] INFO [data.bulk_insert_to_db:718] Inserting batch 50/105 (10000 rows)
+[2025-06-04 15:39:39] INFO [data.bulk_insert_to_db:718] Inserting batch 51/105 (10000 rows)
+[2025-06-04 15:39:40] INFO [data.bulk_insert_to_db:718] Inserting batch 52/105 (10000 rows)
+[2025-06-04 15:39:41] INFO [data.bulk_insert_to_db:718] Inserting batch 53/105 (10000 rows)
+[2025-06-04 15:39:41] INFO [data.bulk_insert_to_db:718] Inserting batch 54/105 (10000 rows)
+[2025-06-04 15:39:41] INFO [data.bulk_insert_to_db:718] Inserting batch 55/105 (10000 rows)
+[2025-06-04 15:39:42] INFO [data.bulk_insert_to_db:718] Inserting batch 56/105 (10000 rows)
+[2025-06-04 15:39:42] INFO [data.bulk_insert_to_db:718] Inserting batch 57/105 (10000 rows)
+[2025-06-04 15:39:43] INFO [data.bulk_insert_to_db:718] Inserting batch 58/105 (10000 rows)
+[2025-06-04 15:39:43] INFO [data.bulk_insert_to_db:718] Inserting batch 59/105 (10000 rows)
+[2025-06-04 15:39:43] INFO [data.bulk_insert_to_db:718] Inserting batch 60/105 (10000 rows)
+[2025-06-04 15:39:44] INFO [data.bulk_insert_to_db:718] Inserting batch 61/105 (10000 rows)
+[2025-06-04 15:39:44] INFO [data.bulk_insert_to_db:718] Inserting batch 62/105 (10000 rows)
+[2025-06-04 15:39:44] INFO [data.bulk_insert_to_db:718] Inserting batch 63/105 (10000 rows)
+[2025-06-04 15:39:44] INFO [data.bulk_insert_to_db:718] Inserting batch 64/105 (10000 rows)
+[2025-06-04 15:39:45] INFO [data.bulk_insert_to_db:718] Inserting batch 65/105 (10000 rows)
+[2025-06-04 15:39:45] INFO [data.bulk_insert_to_db:718] Inserting batch 66/105 (10000 rows)
+[2025-06-04 15:39:45] INFO [data.bulk_insert_to_db:718] Inserting batch 67/105 (10000 rows)
+[2025-06-04 15:39:46] INFO [data.bulk_insert_to_db:718] Inserting batch 68/105 (10000 rows)
+[2025-06-04 15:39:46] INFO [data.bulk_insert_to_db:718] Inserting batch 69/105 (10000 rows)
+[2025-06-04 15:39:46] INFO [data.bulk_insert_to_db:718] Inserting batch 70/105 (10000 rows)
+[2025-06-04 15:39:47] INFO [data.bulk_insert_to_db:718] Inserting batch 71/105 (10000 rows)
+[2025-06-04 15:39:47] INFO [data.bulk_insert_to_db:718] Inserting batch 72/105 (10000 rows)
+[2025-06-04 15:39:47] INFO [data.bulk_insert_to_db:718] Inserting batch 73/105 (10000 rows)
+[2025-06-04 15:39:47] INFO [data.bulk_insert_to_db:718] Inserting batch 74/105 (10000 rows)
+[2025-06-04 15:39:48] INFO [data.bulk_insert_to_db:718] Inserting batch 75/105 (10000 rows)
+[2025-06-04 15:39:48] INFO [data.bulk_insert_to_db:718] Inserting batch 76/105 (10000 rows)
+[2025-06-04 15:39:48] INFO [data.bulk_insert_to_db:718] Inserting batch 77/105 (10000 rows)
+[2025-06-04 15:39:49] INFO [data.bulk_insert_to_db:718] Inserting batch 78/105 (10000 rows)
+[2025-06-04 15:39:49] INFO [data.bulk_insert_to_db:718] Inserting batch 79/105 (10000 rows)
+[2025-06-04 15:39:49] INFO [data.bulk_insert_to_db:718] Inserting batch 80/105 (10000 rows)
+[2025-06-04 15:39:50] INFO [data.bulk_insert_to_db:718] Inserting batch 81/105 (10000 rows)
+[2025-06-04 15:39:50] INFO [data.bulk_insert_to_db:718] Inserting batch 82/105 (10000 rows)
+[2025-06-04 15:39:50] INFO [data.bulk_insert_to_db:718] Inserting batch 83/105 (10000 rows)
+[2025-06-04 15:39:51] INFO [data.bulk_insert_to_db:718] Inserting batch 84/105 (10000 rows)
+[2025-06-04 15:39:51] INFO [data.bulk_insert_to_db:718] Inserting batch 85/105 (10000 rows)
+[2025-06-04 15:39:51] INFO [data.bulk_insert_to_db:718] Inserting batch 86/105 (10000 rows)
+[2025-06-04 15:39:52] INFO [data.bulk_insert_to_db:718] Inserting batch 87/105 (10000 rows)
+[2025-06-04 15:39:52] INFO [data.bulk_insert_to_db:718] Inserting batch 88/105 (10000 rows)
+[2025-06-04 15:39:52] INFO [data.bulk_insert_to_db:718] Inserting batch 89/105 (10000 rows)
+[2025-06-04 15:39:52] INFO [data.bulk_insert_to_db:718] Inserting batch 90/105 (10000 rows)
+[2025-06-04 15:39:53] INFO [data.bulk_insert_to_db:718] Inserting batch 91/105 (10000 rows)
+[2025-06-04 15:39:53] INFO [data.bulk_insert_to_db:718] Inserting batch 92/105 (10000 rows)
+[2025-06-04 15:39:54] INFO [data.bulk_insert_to_db:718] Inserting batch 93/105 (10000 rows)
+[2025-06-04 15:39:54] INFO [data.bulk_insert_to_db:718] Inserting batch 94/105 (10000 rows)
+[2025-06-04 15:39:54] INFO [data.bulk_insert_to_db:718] Inserting batch 95/105 (10000 rows)
+[2025-06-04 15:39:54] INFO [data.bulk_insert_to_db:718] Inserting batch 96/105 (10000 rows)
+[2025-06-04 15:39:55] INFO [data.bulk_insert_to_db:718] Inserting batch 97/105 (10000 rows)
+[2025-06-04 15:39:55] INFO [data.bulk_insert_to_db:718] Inserting batch 98/105 (10000 rows)
+[2025-06-04 15:39:55] INFO [data.bulk_insert_to_db:718] Inserting batch 99/105 (10000 rows)
+[2025-06-04 15:39:56] INFO [data.bulk_insert_to_db:718] Inserting batch 100/105 (10000 rows)
+[2025-06-04 15:39:56] INFO [data.bulk_insert_to_db:718] Inserting batch 101/105 (10000 rows)
+[2025-06-04 15:39:56] INFO [data.bulk_insert_to_db:718] Inserting batch 102/105 (10000 rows)
+[2025-06-04 15:39:57] INFO [data.bulk_insert_to_db:718] Inserting batch 103/105 (10000 rows)
+[2025-06-04 15:39:57] INFO [data.bulk_insert_to_db:718] Inserting batch 104/105 (10000 rows)
+[2025-06-04 15:39:57] INFO [data.bulk_insert_to_db:718] Inserting batch 105/105 (5761 rows)
+[2025-06-04 15:39:58] INFO [data.bulk_insert_to_db:723] Copying data from temporary table to FISHCM_Wifi_All_Login
+[2025-06-04 15:40:11] INFO [data.bulk_insert_to_db:731] Bulk insert completed successfully in 173.13 seconds
+[2025-06-04 15:40:11] INFO [data.bulk_insert_to_db:742] Dropped temporary table: #temp_FISHCM_Wifi_All_Login
+[2025-06-04 15:40:11] INFO [data.save_processed_data_to_db:923] 
+Processing Time Summary:
+[2025-06-04 15:40:11] INFO [data.save_processed_data_to_db:930] table_preparation    0.00s        0.0%
+[2025-06-04 15:40:11] INFO [data.save_processed_data_to_db:930] table_drop           0.01s        0.0%
+[2025-06-04 15:40:11] INFO [data.save_processed_data_to_db:930] schema_creation      3.45s        2.0%
+[2025-06-04 15:40:11] INFO [data.save_processed_data_to_db:930] bulk_insert          173.31s       98.0%
+[2025-06-04 15:40:11] INFO [data.save_processed_data_to_db:934] Total time           176.78s      100.0%
+
+[2025-06-04 15:40:11] INFO [data.process_and_load_csv:1043] Successfully processed 1045761 records into FISHCM_Wifi_All_Login
+[2025-06-04 15:40:11] INFO [data.process_and_load_csv:1044] Processing times: {'table_preparation': 0.0, 'table_drop': 0.01, 'schema_creation': 3.45, 'bulk_insert': 173.31, 'total_time': 176.78}
+[2025-06-04 15:40:11] INFO [data.load_data_endpoint:1103] Successfully processed CSV file: data/FISHCM_Wifi_All_Login.csv
+[2025-06-04 15:40:43] INFO [data.parse_request_params:1358] Parsing request parameters...
+[2025-06-04 15:40:43] INFO [data.parse_request_params:1362] Found JSON data in request
+[2025-06-04 15:40:43] INFO [data.parse_request_params:1369] Parsed parameters from JSON: file_path=data/FISHCM_Wifi_All_Login_2.csv, batch_size=1000, max_rows=None, target_table=FISHCM_Wifi_All_Login
+[2025-06-04 15:40:43] INFO [data.load_data_endpoint:1077] Data load request - file_path: data/FISHCM_Wifi_All_Login_2.csv, batch_size: 1000, max_rows: None, target_table: FISHCM_Wifi_All_Login
+[2025-06-04 15:40:43] INFO [data.process_and_load_csv:979] Starting to process CSV file: data/FISHCM_Wifi_All_Login_2.csv
+[2025-06-04 15:40:43] INFO [data.process_and_load_csv:980] Parameters: batch_size=1000, max_rows=None, target_table=FISHCM_Wifi_All_Login
+[2025-06-04 15:40:43] INFO [data.process_and_load_csv:995] Preprocessing CSV file: data/FISHCM_Wifi_All_Login_2.csv
+[2025-06-04 15:40:43] INFO [data.preprocess_data:405] Small file detected (54.64 MB). Processing normally...
+[2025-06-04 15:40:43] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 15:40:44] INFO [data.preprocess_data:434] Original dataset shape: (266587, 11)
+[2025-06-04 15:40:44] INFO [data.preprocess_data:440] Deduplicated columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid', 'proxypolicyname', 'authenticationserver', 'authenticationtype']
+[2025-06-04 15:40:45] INFO [data.preprocess_data:448] Dropped 3 columns with no variance
+[2025-06-04 15:40:45] INFO [data.preprocess_data:451] Columns dropped due to no variance: ['proxypolicyname', 'authenticationserver', 'authenticationtype']
+[2025-06-04 15:40:47] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:40:47] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 15:40:47] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 15:40:47] INFO [data.preprocess_data:523] Number of duplicate rows: 533
+[2025-06-04 15:40:47] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (266587, 8)
+[2025-06-04 15:40:47] INFO [data.preprocess_data:530] Final columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid']
+[2025-06-04 15:40:47] INFO [data.process_and_load_csv:1015] Registering CSV file in database: data/FISHCM_Wifi_All_Login_2.csv
+[2025-06-04 15:40:48] INFO [data.process_and_load_csv:1034] Starting to save processed data to database
+[2025-06-04 15:40:48] INFO [data.save_processed_data_to_db:819] Using existing table: FISHCM_Wifi_All_Login
+[2025-06-04 15:40:48] INFO [data.save_processed_data_to_db:837] Saving data with 8 columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid']
+[2025-06-04 15:40:48] INFO [data.save_processed_data_to_db:914] Starting bulk insert operation...
+[2025-06-04 15:40:48] INFO [data.bulk_insert_to_db:622] Starting bulk insert for table: FISHCM_Wifi_All_Login
+[2025-06-04 15:40:48] INFO [data.bulk_insert_to_db:627] Fetching table structure...
+[2025-06-04 15:40:48] INFO [data.bulk_insert_to_db:635] Found 10 columns in target table
+[2025-06-04 15:40:51] INFO [data.bulk_insert_to_db:660] Processed timestamp columns: ['time']
+[2025-06-04 15:40:51] INFO [data.bulk_insert_to_db:668] Creating temporary table structure...
+[2025-06-04 15:40:51] INFO [data.bulk_insert_to_db:693] Created temporary table: #temp_FISHCM_Wifi_All_Login
+[2025-06-04 15:41:20] INFO [data.bulk_insert_to_db:709] Prepared 266587 rows for insertion
+[2025-06-04 15:41:20] INFO [data.bulk_insert_to_db:718] Inserting batch 1/27 (10000 rows)
+[2025-06-04 15:41:21] INFO [data.bulk_insert_to_db:718] Inserting batch 2/27 (10000 rows)
+[2025-06-04 15:41:21] INFO [data.bulk_insert_to_db:718] Inserting batch 3/27 (10000 rows)
+[2025-06-04 15:41:21] INFO [data.bulk_insert_to_db:718] Inserting batch 4/27 (10000 rows)
+[2025-06-04 15:41:22] INFO [data.bulk_insert_to_db:718] Inserting batch 5/27 (10000 rows)
+[2025-06-04 15:41:22] INFO [data.bulk_insert_to_db:718] Inserting batch 6/27 (10000 rows)
+[2025-06-04 15:41:23] INFO [data.bulk_insert_to_db:718] Inserting batch 7/27 (10000 rows)
+[2025-06-04 15:41:23] INFO [data.bulk_insert_to_db:718] Inserting batch 8/27 (10000 rows)
+[2025-06-04 15:41:23] INFO [data.bulk_insert_to_db:718] Inserting batch 9/27 (10000 rows)
+[2025-06-04 15:41:24] INFO [data.bulk_insert_to_db:718] Inserting batch 10/27 (10000 rows)
+[2025-06-04 15:41:24] INFO [data.bulk_insert_to_db:718] Inserting batch 11/27 (10000 rows)
+[2025-06-04 15:41:24] INFO [data.bulk_insert_to_db:718] Inserting batch 12/27 (10000 rows)
+[2025-06-04 15:41:25] INFO [data.bulk_insert_to_db:718] Inserting batch 13/27 (10000 rows)
+[2025-06-04 15:41:25] INFO [data.bulk_insert_to_db:718] Inserting batch 14/27 (10000 rows)
+[2025-06-04 15:41:25] INFO [data.bulk_insert_to_db:718] Inserting batch 15/27 (10000 rows)
+[2025-06-04 15:41:26] INFO [data.bulk_insert_to_db:718] Inserting batch 16/27 (10000 rows)
+[2025-06-04 15:41:26] INFO [data.bulk_insert_to_db:718] Inserting batch 17/27 (10000 rows)
+[2025-06-04 15:41:26] INFO [data.bulk_insert_to_db:718] Inserting batch 18/27 (10000 rows)
+[2025-06-04 15:41:27] INFO [data.bulk_insert_to_db:718] Inserting batch 19/27 (10000 rows)
+[2025-06-04 15:41:27] INFO [data.bulk_insert_to_db:718] Inserting batch 20/27 (10000 rows)
+[2025-06-04 15:41:27] INFO [data.bulk_insert_to_db:718] Inserting batch 21/27 (10000 rows)
+[2025-06-04 15:41:28] INFO [data.bulk_insert_to_db:718] Inserting batch 22/27 (10000 rows)
+[2025-06-04 15:41:28] INFO [data.bulk_insert_to_db:718] Inserting batch 23/27 (10000 rows)
+[2025-06-04 15:41:28] INFO [data.bulk_insert_to_db:718] Inserting batch 24/27 (10000 rows)
+[2025-06-04 15:41:28] INFO [data.bulk_insert_to_db:718] Inserting batch 25/27 (10000 rows)
+[2025-06-04 15:41:29] INFO [data.bulk_insert_to_db:718] Inserting batch 26/27 (10000 rows)
+[2025-06-04 15:41:29] INFO [data.bulk_insert_to_db:718] Inserting batch 27/27 (6587 rows)
+[2025-06-04 15:41:29] INFO [data.bulk_insert_to_db:723] Copying data from temporary table to FISHCM_Wifi_All_Login
+[2025-06-04 15:41:33] INFO [data.bulk_insert_to_db:731] Bulk insert completed successfully in 44.94 seconds
+[2025-06-04 15:41:33] INFO [data.bulk_insert_to_db:742] Dropped temporary table: #temp_FISHCM_Wifi_All_Login
+[2025-06-04 15:41:33] INFO [data.save_processed_data_to_db:923] 
+Processing Time Summary:
+[2025-06-04 15:41:33] INFO [data.save_processed_data_to_db:930] table_preparation    0.00s        0.0%
+[2025-06-04 15:41:33] INFO [data.save_processed_data_to_db:930] table_drop           0.00s        0.0%
+[2025-06-04 15:41:33] INFO [data.save_processed_data_to_db:930] schema_creation      0.00s        0.0%
+[2025-06-04 15:41:33] INFO [data.save_processed_data_to_db:930] bulk_insert          44.98s       99.9%
+[2025-06-04 15:41:33] INFO [data.save_processed_data_to_db:934] Total time           45.01s      100.0%
+
+[2025-06-04 15:41:33] INFO [data.process_and_load_csv:1043] Successfully processed 266587 records into FISHCM_Wifi_All_Login
+[2025-06-04 15:41:33] INFO [data.process_and_load_csv:1044] Processing times: {'table_preparation': 0.0, 'table_drop': 0, 'schema_creation': 0, 'bulk_insert': 44.98, 'total_time': 45.01}
+[2025-06-04 15:41:33] INFO [data.load_data_endpoint:1103] Successfully processed CSV file: data/FISHCM_Wifi_All_Login_2.csv
+[2025-06-04 15:51:44] INFO [data.parse_request_params:1335] Parsing request parameters...
+[2025-06-04 15:51:44] INFO [data.parse_request_params:1339] Found JSON data in request
+[2025-06-04 15:51:44] INFO [data.parse_request_params:1346] Parsed parameters from JSON: file_path=data/FISHCM-NetworkLogon.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:51:44] INFO [data.load_data_endpoint:1051] Data load request - file_path: data/FISHCM-NetworkLogon.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 15:51:44] INFO [data.process_and_load_csv:953] Starting to process CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 15:51:44] INFO [data.process_and_load_csv:954] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:51:44] INFO [data.process_and_load_csv:969] Preprocessing CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 15:51:44] INFO [data.preprocess_data:405] Small file detected (7.33 MB). Processing normally...
+[2025-06-04 15:51:44] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 15:51:44] INFO [data.preprocess_data:434] Original dataset shape: (69823, 8)
+[2025-06-04 15:51:44] INFO [data.preprocess_data:440] Deduplicated columns: ['time', 'computer', 'user', 'workstationname', 'source_workstation', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:51:45] INFO [data.preprocess_data:488] Column 'workstationname' equals to columns ['source_workstation'] - keeping 'workstationname'
+[2025-06-04 15:51:45] INFO [data.preprocess_data:495] Dropped 1 duplicate columns
+[2025-06-04 15:51:45] INFO [data.preprocess_data:498] Columns dropped due to duplication: ['source_workstation']
+[2025-06-04 15:51:45] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:51:45] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 15:51:45] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 15:51:45] INFO [data.preprocess_data:523] Number of duplicate rows: 0
+[2025-06-04 15:51:45] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (69823, 7)
+[2025-06-04 15:51:45] INFO [data.preprocess_data:530] Final columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:51:45] INFO [data.process_and_load_csv:989] Registering CSV file in database: data/FISHCM-NetworkLogon.csv
+[2025-06-04 15:51:45] INFO [data.register_csv_file:606] Updated existing file registration with ID: 7
+[2025-06-04 15:51:45] INFO [data.process_and_load_csv:1008] Starting to save processed data to database
+[2025-06-04 15:51:45] INFO [data.save_processed_data_to_db:802] Creating new table: FISHCM_NetworkLogon
+[2025-06-04 15:51:45] INFO [data.save_processed_data_to_db:811] Saving data with 7 columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:51:45] INFO [data.save_processed_data_to_db:832] Dropped existing table: FISHCM_NetworkLogon
+[2025-06-04 15:51:45] INFO [data.save_processed_data_to_db:866] Column 'time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:51:45] INFO [data.save_processed_data_to_db:866] Column 'computer' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:51:45] INFO [data.save_processed_data_to_db:866] Column 'user' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 15:51:45] INFO [data.save_processed_data_to_db:866] Column 'workstationname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:51:46] INFO [data.save_processed_data_to_db:866] Column 'ipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:51:46] INFO [data.save_processed_data_to_db:866] Column 'name' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:51:46] INFO [data.save_processed_data_to_db:866] Column 'event_count' mapped to SQL type: BIGINT
+[2025-06-04 15:51:46] INFO [data.save_processed_data_to_db:878] Created new table: FISHCM_NetworkLogon
+[2025-06-04 15:51:46] INFO [data.save_processed_data_to_db:888] Starting bulk insert operation...
+[2025-06-04 15:51:46] INFO [data.bulk_insert_to_db:633] Starting bulk insert for table: FISHCM_NetworkLogon
+[2025-06-04 15:51:46] INFO [data.bulk_insert_to_db:648] Found 9 columns in target table
+[2025-06-04 15:51:51] INFO [data.bulk_insert_to_db:692] Inserting batch 1/7 (10000 rows)
+[2025-06-04 15:51:53] INFO [data.bulk_insert_to_db:692] Inserting batch 2/7 (10000 rows)
+[2025-06-04 15:51:56] INFO [data.bulk_insert_to_db:692] Inserting batch 3/7 (10000 rows)
+[2025-06-04 15:51:58] INFO [data.bulk_insert_to_db:692] Inserting batch 4/7 (10000 rows)
+[2025-06-04 15:52:01] INFO [data.bulk_insert_to_db:692] Inserting batch 5/7 (10000 rows)
+[2025-06-04 15:52:04] INFO [data.bulk_insert_to_db:692] Inserting batch 6/7 (10000 rows)
+[2025-06-04 15:52:06] INFO [data.bulk_insert_to_db:692] Inserting batch 7/7 (9823 rows)
+[2025-06-04 15:52:09] INFO [data.save_processed_data_to_db:897] 
+Processing Time Summary:
+[2025-06-04 15:52:09] INFO [data.save_processed_data_to_db:904] table_preparation    0.01s        0.0%
+[2025-06-04 15:52:09] INFO [data.save_processed_data_to_db:904] table_drop           0.03s        0.1%
+[2025-06-04 15:52:09] INFO [data.save_processed_data_to_db:904] schema_creation      0.27s        1.1%
+[2025-06-04 15:52:09] INFO [data.save_processed_data_to_db:904] bulk_insert          23.64s       98.7%
+[2025-06-04 15:52:09] INFO [data.save_processed_data_to_db:908] Total time           23.95s      100.0%
+
+[2025-06-04 15:52:09] INFO [data.process_and_load_csv:1017] Successfully processed 69823 records into FISHCM_NetworkLogon
+[2025-06-04 15:52:09] INFO [data.process_and_load_csv:1018] Processing times: {'table_preparation': 0.01, 'table_drop': 0.03, 'schema_creation': 0.27, 'bulk_insert': 23.64, 'total_time': 23.95}
+[2025-06-04 15:52:09] INFO [data.load_data_endpoint:1077] Successfully processed CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 15:57:43] INFO [data.parse_request_params:1335] Parsing request parameters...
+[2025-06-04 15:57:43] INFO [data.parse_request_params:1339] Found JSON data in request
+[2025-06-04 15:57:43] INFO [data.parse_request_params:1346] Parsed parameters from JSON: file_path=data/FISHCM-NetworkLogon.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:57:43] INFO [data.load_data_endpoint:1051] Data load request - file_path: data/FISHCM-NetworkLogon.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 15:57:43] INFO [data.process_and_load_csv:953] Starting to process CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 15:57:43] INFO [data.process_and_load_csv:954] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 15:57:43] INFO [data.process_and_load_csv:969] Preprocessing CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 15:57:43] INFO [data.preprocess_data:405] Small file detected (7.33 MB). Processing normally...
+[2025-06-04 15:57:43] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 15:57:43] INFO [data.preprocess_data:434] Original dataset shape: (69823, 8)
+[2025-06-04 15:57:43] INFO [data.preprocess_data:440] Deduplicated columns: ['time', 'computer', 'user', 'workstationname', 'source_workstation', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:57:43] INFO [data.preprocess_data:488] Column 'workstationname' equals to columns ['source_workstation'] - keeping 'workstationname'
+[2025-06-04 15:57:43] INFO [data.preprocess_data:495] Dropped 1 duplicate columns
+[2025-06-04 15:57:43] INFO [data.preprocess_data:498] Columns dropped due to duplication: ['source_workstation']
+[2025-06-04 15:57:43] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 15:57:43] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 15:57:43] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 15:57:43] INFO [data.preprocess_data:523] Number of duplicate rows: 0
+[2025-06-04 15:57:43] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (69823, 7)
+[2025-06-04 15:57:43] INFO [data.preprocess_data:530] Final columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:57:43] INFO [data.process_and_load_csv:989] Registering CSV file in database: data/FISHCM-NetworkLogon.csv
+[2025-06-04 15:57:43] INFO [data.register_csv_file:606] Updated existing file registration with ID: 7
+[2025-06-04 15:57:43] INFO [data.process_and_load_csv:1008] Starting to save processed data to database
+[2025-06-04 15:57:43] INFO [data.save_processed_data_to_db:802] Creating new table: FISHCM_NetworkLogon
+[2025-06-04 15:57:43] INFO [data.save_processed_data_to_db:811] Saving data with 7 columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 15:57:44] INFO [data.save_processed_data_to_db:832] Dropped existing table: FISHCM_NetworkLogon
+[2025-06-04 15:57:44] INFO [data.save_processed_data_to_db:866] Column 'time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:57:44] INFO [data.save_processed_data_to_db:866] Column 'computer' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:57:44] INFO [data.save_processed_data_to_db:866] Column 'user' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 15:57:44] INFO [data.save_processed_data_to_db:866] Column 'workstationname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:57:44] INFO [data.save_processed_data_to_db:866] Column 'ipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:57:44] INFO [data.save_processed_data_to_db:866] Column 'name' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 15:57:44] INFO [data.save_processed_data_to_db:866] Column 'event_count' mapped to SQL type: BIGINT
+[2025-06-04 15:57:44] INFO [data.save_processed_data_to_db:878] Created new table: FISHCM_NetworkLogon
+[2025-06-04 15:57:44] INFO [data.save_processed_data_to_db:888] Starting bulk insert operation...
+[2025-06-04 15:57:44] INFO [data.bulk_insert_to_db:633] Starting bulk insert for table: FISHCM_NetworkLogon
+[2025-06-04 15:57:44] INFO [data.bulk_insert_to_db:648] Found 9 columns in target table
+[2025-06-04 15:57:49] INFO [data.bulk_insert_to_db:692] Inserting batch 1/7 (10000 rows)
+[2025-06-04 15:57:52] INFO [data.bulk_insert_to_db:692] Inserting batch 2/7 (10000 rows)
+[2025-06-04 15:57:55] INFO [data.bulk_insert_to_db:692] Inserting batch 3/7 (10000 rows)
+[2025-06-04 15:57:57] INFO [data.bulk_insert_to_db:692] Inserting batch 4/7 (10000 rows)
+[2025-06-04 15:58:00] INFO [data.bulk_insert_to_db:692] Inserting batch 5/7 (10000 rows)
+[2025-06-04 15:58:03] INFO [data.bulk_insert_to_db:692] Inserting batch 6/7 (10000 rows)
+[2025-06-04 15:58:06] INFO [data.bulk_insert_to_db:692] Inserting batch 7/7 (9823 rows)
+[2025-06-04 15:58:09] INFO [data.save_processed_data_to_db:897] 
+Processing Time Summary:
+[2025-06-04 15:58:09] INFO [data.save_processed_data_to_db:904] table_preparation    0.03s        0.1%
+[2025-06-04 15:58:09] INFO [data.save_processed_data_to_db:904] table_drop           0.12s        0.5%
+[2025-06-04 15:58:09] INFO [data.save_processed_data_to_db:904] schema_creation      0.28s        1.1%
+[2025-06-04 15:58:09] INFO [data.save_processed_data_to_db:904] bulk_insert          24.72s       98.3%
+[2025-06-04 15:58:09] INFO [data.save_processed_data_to_db:908] Total time           25.15s      100.0%
+
+[2025-06-04 15:58:09] INFO [data.process_and_load_csv:1017] Successfully processed 69823 records into FISHCM_NetworkLogon
+[2025-06-04 15:58:09] INFO [data.process_and_load_csv:1018] Processing times: {'table_preparation': 0.03, 'table_drop': 0.12, 'schema_creation': 0.28, 'bulk_insert': 24.72, 'total_time': 25.15}
+[2025-06-04 15:58:09] INFO [data.load_data_endpoint:1077] Successfully processed CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:11:12] INFO [data.parse_request_params:1335] Parsing request parameters...
+[2025-06-04 16:11:12] INFO [data.parse_request_params:1339] Found JSON data in request
+[2025-06-04 16:11:12] INFO [data.parse_request_params:1346] Parsed parameters from JSON: file_path=data/FISHCM-NetworkLogon.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 16:11:12] INFO [data.load_data_endpoint:1051] Data load request - file_path: data/FISHCM-NetworkLogon.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 16:11:12] INFO [data.process_and_load_csv:953] Starting to process CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:11:12] INFO [data.process_and_load_csv:954] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 16:11:12] INFO [data.process_and_load_csv:969] Preprocessing CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:11:12] INFO [data.preprocess_data:405] Small file detected (7.33 MB). Processing normally...
+[2025-06-04 16:11:12] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 16:11:13] INFO [data.preprocess_data:434] Original dataset shape: (69823, 8)
+[2025-06-04 16:11:13] INFO [data.preprocess_data:440] Deduplicated columns: ['time', 'computer', 'user', 'workstationname', 'source_workstation', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:11:13] INFO [data.preprocess_data:488] Column 'workstationname' equals to columns ['source_workstation'] - keeping 'workstationname'
+[2025-06-04 16:11:13] INFO [data.preprocess_data:495] Dropped 1 duplicate columns
+[2025-06-04 16:11:13] INFO [data.preprocess_data:498] Columns dropped due to duplication: ['source_workstation']
+[2025-06-04 16:11:13] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 16:11:13] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 16:11:13] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 16:11:13] INFO [data.preprocess_data:523] Number of duplicate rows: 0
+[2025-06-04 16:11:13] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (69823, 7)
+[2025-06-04 16:11:13] INFO [data.preprocess_data:530] Final columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:11:13] INFO [data.process_and_load_csv:989] Registering CSV file in database: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:11:14] INFO [data.register_csv_file:606] Updated existing file registration with ID: 7
+[2025-06-04 16:11:14] INFO [data.process_and_load_csv:1008] Starting to save processed data to database
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:802] Creating new table: FISHCM_NetworkLogon
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:811] Saving data with 7 columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:832] Dropped existing table: FISHCM_NetworkLogon
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:866] Column 'time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:866] Column 'computer' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:866] Column 'user' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:866] Column 'workstationname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:866] Column 'ipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:866] Column 'name' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:866] Column 'event_count' mapped to SQL type: BIGINT
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:878] Created new table: FISHCM_NetworkLogon
+[2025-06-04 16:11:14] INFO [data.save_processed_data_to_db:888] Starting bulk insert operation...
+[2025-06-04 16:11:14] INFO [data.bulk_insert_to_db:633] Starting bulk insert for table: FISHCM_NetworkLogon
+[2025-06-04 16:11:15] INFO [data.bulk_insert_to_db:648] Found 9 columns in target table
+[2025-06-04 16:11:18] INFO [data.bulk_insert_to_db:692] Inserting batch 1/7 (10000 rows)
+[2025-06-04 16:11:21] INFO [data.bulk_insert_to_db:692] Inserting batch 2/7 (10000 rows)
+[2025-06-04 16:11:24] INFO [data.bulk_insert_to_db:692] Inserting batch 3/7 (10000 rows)
+[2025-06-04 16:11:26] INFO [data.bulk_insert_to_db:692] Inserting batch 4/7 (10000 rows)
+[2025-06-04 16:11:28] INFO [data.bulk_insert_to_db:692] Inserting batch 5/7 (10000 rows)
+[2025-06-04 16:11:31] INFO [data.bulk_insert_to_db:692] Inserting batch 6/7 (10000 rows)
+[2025-06-04 16:11:33] INFO [data.bulk_insert_to_db:692] Inserting batch 7/7 (9823 rows)
+[2025-06-04 16:11:37] INFO [data.save_processed_data_to_db:897] 
+Processing Time Summary:
+[2025-06-04 16:11:37] INFO [data.save_processed_data_to_db:904] table_preparation    0.00s        0.0%
+[2025-06-04 16:11:37] INFO [data.save_processed_data_to_db:904] table_drop           0.01s        0.0%
+[2025-06-04 16:11:37] INFO [data.save_processed_data_to_db:904] schema_creation      0.58s        2.5%
+[2025-06-04 16:11:37] INFO [data.save_processed_data_to_db:904] bulk_insert          22.52s       97.4%
+[2025-06-04 16:11:37] INFO [data.save_processed_data_to_db:908] Total time           23.12s      100.0%
+
+[2025-06-04 16:11:37] INFO [data.process_and_load_csv:1017] Successfully processed 69823 records into FISHCM_NetworkLogon
+[2025-06-04 16:11:37] INFO [data.process_and_load_csv:1018] Processing times: {'table_preparation': 0.0, 'table_drop': 0.01, 'schema_creation': 0.58, 'bulk_insert': 22.52, 'total_time': 23.12}
+[2025-06-04 16:11:37] INFO [data.load_data_endpoint:1077] Successfully processed CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:21:44] INFO [data.parse_request_params:1335] Parsing request parameters...
+[2025-06-04 16:21:44] INFO [data.parse_request_params:1339] Found JSON data in request
+[2025-06-04 16:21:44] INFO [data.parse_request_params:1346] Parsed parameters from JSON: file_path=data/FISHCM-NetworkLogon.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 16:21:44] INFO [data.load_data_endpoint:1051] Data load request - file_path: data/FISHCM-NetworkLogon.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 16:21:44] INFO [data.process_and_load_csv:953] Starting to process CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:21:44] INFO [data.process_and_load_csv:954] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 16:21:44] INFO [data.process_and_load_csv:969] Preprocessing CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:21:44] INFO [data.preprocess_data:405] Small file detected (7.33 MB). Processing normally...
+[2025-06-04 16:21:44] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 16:21:44] INFO [data.preprocess_data:434] Original dataset shape: (69823, 8)
+[2025-06-04 16:21:44] INFO [data.preprocess_data:440] Deduplicated columns: ['time', 'computer', 'user', 'workstationname', 'source_workstation', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:21:45] INFO [data.preprocess_data:488] Column 'workstationname' equals to columns ['source_workstation'] - keeping 'workstationname'
+[2025-06-04 16:21:45] INFO [data.preprocess_data:495] Dropped 1 duplicate columns
+[2025-06-04 16:21:45] INFO [data.preprocess_data:498] Columns dropped due to duplication: ['source_workstation']
+[2025-06-04 16:21:46] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 16:21:46] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 16:21:46] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 16:21:46] INFO [data.preprocess_data:523] Number of duplicate rows: 0
+[2025-06-04 16:21:46] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (69823, 7)
+[2025-06-04 16:21:46] INFO [data.preprocess_data:530] Final columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:21:46] INFO [data.process_and_load_csv:989] Registering CSV file in database: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:21:46] INFO [data.register_csv_file:606] Updated existing file registration with ID: 7
+[2025-06-04 16:21:46] INFO [data.process_and_load_csv:1008] Starting to save processed data to database
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:802] Creating new table: FISHCM_NetworkLogon
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:811] Saving data with 7 columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:832] Dropped existing table: FISHCM_NetworkLogon
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:866] Column 'time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:866] Column 'computer' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:866] Column 'user' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:866] Column 'workstationname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:866] Column 'ipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:866] Column 'name' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:866] Column 'event_count' mapped to SQL type: BIGINT
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:878] Created new table: FISHCM_NetworkLogon
+[2025-06-04 16:21:46] INFO [data.save_processed_data_to_db:888] Starting bulk insert operation...
+[2025-06-04 16:21:46] INFO [data.bulk_insert_to_db:633] Starting bulk insert for table: FISHCM_NetworkLogon
+[2025-06-04 16:21:46] INFO [data.bulk_insert_to_db:648] Found 9 columns in target table
+[2025-06-04 16:21:51] INFO [data.bulk_insert_to_db:692] Inserting batch 1/7 (10000 rows)
+[2025-06-04 16:21:53] INFO [data.bulk_insert_to_db:692] Inserting batch 2/7 (10000 rows)
+[2025-06-04 16:21:56] INFO [data.bulk_insert_to_db:692] Inserting batch 3/7 (10000 rows)
+[2025-06-04 16:21:58] INFO [data.bulk_insert_to_db:692] Inserting batch 4/7 (10000 rows)
+[2025-06-04 16:22:01] INFO [data.bulk_insert_to_db:692] Inserting batch 5/7 (10000 rows)
+[2025-06-04 16:22:04] INFO [data.bulk_insert_to_db:692] Inserting batch 6/7 (10000 rows)
+[2025-06-04 16:22:06] INFO [data.bulk_insert_to_db:692] Inserting batch 7/7 (9823 rows)
+[2025-06-04 16:22:09] INFO [data.save_processed_data_to_db:897] 
+Processing Time Summary:
+[2025-06-04 16:22:09] INFO [data.save_processed_data_to_db:904] table_preparation    0.00s        0.0%
+[2025-06-04 16:22:09] INFO [data.save_processed_data_to_db:904] table_drop           0.12s        0.5%
+[2025-06-04 16:22:09] INFO [data.save_processed_data_to_db:904] schema_creation      0.35s        1.5%
+[2025-06-04 16:22:09] INFO [data.save_processed_data_to_db:904] bulk_insert          22.37s       97.9%
+[2025-06-04 16:22:09] INFO [data.save_processed_data_to_db:908] Total time           22.85s      100.0%
+
+[2025-06-04 16:22:09] INFO [data.process_and_load_csv:1017] Successfully processed 69823 records into FISHCM_NetworkLogon
+[2025-06-04 16:22:09] INFO [data.process_and_load_csv:1018] Processing times: {'table_preparation': 0.0, 'table_drop': 0.12, 'schema_creation': 0.35, 'bulk_insert': 22.37, 'total_time': 22.85}
+[2025-06-04 16:22:09] INFO [data.load_data_endpoint:1077] Successfully processed CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:50:40] INFO [data.parse_request_params:1351] Parsing request parameters...
+[2025-06-04 16:50:40] INFO [data.parse_request_params:1355] Found JSON data in request
+[2025-06-04 16:50:40] INFO [data.parse_request_params:1362] Parsed parameters from JSON: file_path=data/FISHCM-NetworkLogon.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 16:50:40] INFO [data.load_data_endpoint:1060] Data load request - file_path: data/FISHCM-NetworkLogon.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 16:50:40] INFO [data.process_and_load_csv:962] Starting to process CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:50:40] INFO [data.process_and_load_csv:963] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 16:50:40] INFO [data.process_and_load_csv:978] Preprocessing CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:50:40] INFO [data.preprocess_data:405] Small file detected (7.33 MB). Processing normally...
+[2025-06-04 16:50:40] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 16:50:40] INFO [data.preprocess_data:434] Original dataset shape: (69823, 8)
+[2025-06-04 16:50:40] INFO [data.preprocess_data:440] Deduplicated columns: ['time', 'computer', 'user', 'workstationname', 'source_workstation', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:50:40] INFO [data.preprocess_data:488] Column 'workstationname' equals to columns ['source_workstation'] - keeping 'workstationname'
+[2025-06-04 16:50:40] INFO [data.preprocess_data:495] Dropped 1 duplicate columns
+[2025-06-04 16:50:41] INFO [data.preprocess_data:498] Columns dropped due to duplication: ['source_workstation']
+[2025-06-04 16:50:41] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 16:50:41] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 16:50:41] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 16:50:41] INFO [data.preprocess_data:523] Number of duplicate rows: 0
+[2025-06-04 16:50:41] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (69823, 7)
+[2025-06-04 16:50:41] INFO [data.preprocess_data:530] Final columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:50:41] INFO [data.process_and_load_csv:998] Registering CSV file in database: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:50:41] INFO [data.register_csv_file:624] Created new file registration with ID: 1
+[2025-06-04 16:50:41] INFO [data.process_and_load_csv:1017] Starting to save processed data to database
+[2025-06-04 16:50:41] INFO [data.save_processed_data_to_db:811] Creating new table: FISHCM_NetworkLogon
+[2025-06-04 16:50:41] INFO [data.save_processed_data_to_db:820] Saving data with 7 columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:50:42] INFO [data.save_processed_data_to_db:841] Dropped existing table: FISHCM_NetworkLogon
+[2025-06-04 16:50:42] INFO [data.save_processed_data_to_db:875] Column 'time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:50:42] INFO [data.save_processed_data_to_db:875] Column 'computer' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:50:42] INFO [data.save_processed_data_to_db:875] Column 'user' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 16:50:42] INFO [data.save_processed_data_to_db:875] Column 'workstationname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:50:42] INFO [data.save_processed_data_to_db:875] Column 'ipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:50:42] INFO [data.save_processed_data_to_db:875] Column 'name' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:50:42] INFO [data.save_processed_data_to_db:875] Column 'event_count' mapped to SQL type: BIGINT
+[2025-06-04 16:50:42] INFO [data.save_processed_data_to_db:887] Created new table: FISHCM_NetworkLogon
+[2025-06-04 16:50:42] INFO [data.save_processed_data_to_db:897] Starting bulk insert operation...
+[2025-06-04 16:50:42] INFO [data.bulk_insert_to_db:637] Starting bulk insert for table: FISHCM_NetworkLogon
+[2025-06-04 16:50:42] INFO [data.bulk_insert_to_db:653] Found 9 columns in target table
+[2025-06-04 16:50:46] INFO [data.bulk_insert_to_db:699] Inserting batch 1/7 (10000 rows)
+[2025-06-04 16:50:49] INFO [data.bulk_insert_to_db:699] Inserting batch 2/7 (10000 rows)
+[2025-06-04 16:50:51] INFO [data.bulk_insert_to_db:699] Inserting batch 3/7 (10000 rows)
+[2025-06-04 16:50:54] INFO [data.bulk_insert_to_db:699] Inserting batch 4/7 (10000 rows)
+[2025-06-04 16:50:57] INFO [data.bulk_insert_to_db:699] Inserting batch 5/7 (10000 rows)
+[2025-06-04 16:50:59] INFO [data.bulk_insert_to_db:699] Inserting batch 6/7 (10000 rows)
+[2025-06-04 16:51:02] INFO [data.bulk_insert_to_db:699] Inserting batch 7/7 (9823 rows)
+[2025-06-04 16:58:47] INFO [data.parse_request_params:1351] Parsing request parameters...
+[2025-06-04 16:58:47] INFO [data.parse_request_params:1355] Found JSON data in request
+[2025-06-04 16:58:47] INFO [data.parse_request_params:1362] Parsed parameters from JSON: file_path=data/FISHCM-NetworkLogon.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 16:58:47] INFO [data.load_data_endpoint:1060] Data load request - file_path: data/FISHCM-NetworkLogon.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 16:58:47] INFO [data.process_and_load_csv:962] Starting to process CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:58:47] INFO [data.process_and_load_csv:963] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 16:58:47] INFO [data.process_and_load_csv:978] Preprocessing CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:58:47] INFO [data.preprocess_data:405] Small file detected (7.33 MB). Processing normally...
+[2025-06-04 16:58:47] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 16:58:47] INFO [data.preprocess_data:434] Original dataset shape: (69823, 8)
+[2025-06-04 16:58:47] INFO [data.preprocess_data:440] Deduplicated columns: ['time', 'computer', 'user', 'workstationname', 'source_workstation', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:58:48] INFO [data.preprocess_data:488] Column 'workstationname' equals to columns ['source_workstation'] - keeping 'workstationname'
+[2025-06-04 16:58:48] INFO [data.preprocess_data:495] Dropped 1 duplicate columns
+[2025-06-04 16:58:48] INFO [data.preprocess_data:498] Columns dropped due to duplication: ['source_workstation']
+[2025-06-04 16:58:48] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 16:58:48] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 16:58:48] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 16:58:48] INFO [data.preprocess_data:523] Number of duplicate rows: 0
+[2025-06-04 16:58:48] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (69823, 7)
+[2025-06-04 16:58:48] INFO [data.preprocess_data:530] Final columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:58:48] INFO [data.process_and_load_csv:998] Registering CSV file in database: data/FISHCM-NetworkLogon.csv
+[2025-06-04 16:58:49] INFO [data.register_csv_file:609] Updated existing file registration with ID: 1
+[2025-06-04 16:58:49] INFO [data.process_and_load_csv:1017] Starting to save processed data to database
+[2025-06-04 16:58:49] INFO [data.save_processed_data_to_db:811] Creating new table: FISHCM_NetworkLogon
+[2025-06-04 16:58:49] INFO [data.save_processed_data_to_db:820] Saving data with 7 columns: ['time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 16:58:49] INFO [data.save_processed_data_to_db:841] Dropped existing table: FISHCM_NetworkLogon
+[2025-06-04 16:58:49] INFO [data.save_processed_data_to_db:875] Column 'time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:58:49] INFO [data.save_processed_data_to_db:875] Column 'computer' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:58:49] INFO [data.save_processed_data_to_db:875] Column 'user' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 16:58:49] INFO [data.save_processed_data_to_db:875] Column 'workstationname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:58:49] INFO [data.save_processed_data_to_db:875] Column 'ipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:58:50] INFO [data.save_processed_data_to_db:875] Column 'name' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 16:58:50] INFO [data.save_processed_data_to_db:875] Column 'event_count' mapped to SQL type: BIGINT
+[2025-06-04 16:58:50] INFO [data.save_processed_data_to_db:887] Created new table: FISHCM_NetworkLogon
+[2025-06-04 16:58:50] INFO [data.save_processed_data_to_db:897] Starting bulk insert operation...
+[2025-06-04 16:58:50] INFO [data.bulk_insert_to_db:637] Starting bulk insert for table: FISHCM_NetworkLogon
+[2025-06-04 16:58:50] INFO [data.bulk_insert_to_db:653] Found 9 columns in target table
+[2025-06-04 16:58:55] INFO [data.bulk_insert_to_db:699] Inserting batch 1/7 (10000 rows)
+[2025-06-04 16:58:57] INFO [data.bulk_insert_to_db:699] Inserting batch 2/7 (10000 rows)
+[2025-06-04 16:59:00] INFO [data.bulk_insert_to_db:699] Inserting batch 3/7 (10000 rows)
+[2025-06-04 16:59:02] INFO [data.bulk_insert_to_db:699] Inserting batch 4/7 (10000 rows)
+[2025-06-04 16:59:05] INFO [data.bulk_insert_to_db:699] Inserting batch 5/7 (10000 rows)
+[2025-06-04 16:59:07] INFO [data.bulk_insert_to_db:699] Inserting batch 6/7 (10000 rows)
+[2025-06-04 16:59:09] INFO [data.bulk_insert_to_db:699] Inserting batch 7/7 (9823 rows)
+[2025-06-04 16:59:12] INFO [data.bulk_insert_to_db:714] Completed bulk insert to FISHCM_NetworkLogon in 22.379542350769043
+[2025-06-04 16:59:12] INFO [data.save_processed_data_to_db:906] 
+Processing Time Summary:
+[2025-06-04 16:59:12] INFO [data.save_processed_data_to_db:913] table_preparation    0.06s        0.3%
+[2025-06-04 16:59:12] INFO [data.save_processed_data_to_db:913] table_drop           0.15s        0.7%
+[2025-06-04 16:59:12] INFO [data.save_processed_data_to_db:913] schema_creation      0.56s        2.4%
+[2025-06-04 16:59:12] INFO [data.save_processed_data_to_db:913] bulk_insert          22.39s       96.6%
+[2025-06-04 16:59:12] INFO [data.save_processed_data_to_db:917] Total time           23.17s      100.0%
+
+[2025-06-04 16:59:12] INFO [data.process_and_load_csv:1026] Successfully processed 69823 records into FISHCM_NetworkLogon
+[2025-06-04 16:59:12] INFO [data.process_and_load_csv:1027] Processing times: {'table_preparation': 0.06, 'table_drop': 0.15, 'schema_creation': 0.56, 'bulk_insert': 22.39, 'total_time': 23.17}
+[2025-06-04 16:59:12] INFO [data.load_data_endpoint:1086] Successfully processed CSV file: data/FISHCM-NetworkLogon.csv
+[2025-06-04 17:01:09] INFO [data.parse_request_params:1351] Parsing request parameters...
+[2025-06-04 17:01:09] INFO [data.parse_request_params:1355] Found JSON data in request
+[2025-06-04 17:01:09] INFO [data.parse_request_params:1362] Parsed parameters from JSON: file_path=data/FISHCM_AUTHENTICATE_CHECKPOINT.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 17:01:09] INFO [data.load_data_endpoint:1060] Data load request - file_path: data/FISHCM_AUTHENTICATE_CHECKPOINT.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 17:01:09] INFO [data.process_and_load_csv:962] Starting to process CSV file: data/FISHCM_AUTHENTICATE_CHECKPOINT.csv
+[2025-06-04 17:01:09] INFO [data.process_and_load_csv:963] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 17:01:09] INFO [data.process_and_load_csv:978] Preprocessing CSV file: data/FISHCM_AUTHENTICATE_CHECKPOINT.csv
+[2025-06-04 17:01:09] INFO [data.preprocess_data:405] Small file detected (0.18 MB). Processing normally...
+[2025-06-04 17:01:09] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 17:01:09] INFO [data.preprocess_data:434] Original dataset shape: (1770, 6)
+[2025-06-04 17:01:09] INFO [data.preprocess_data:440] Deduplicated columns: ['_time', 'targetusername', 'ipaddress', 'ipport', 'status', 'signature']
+[2025-06-04 17:01:09] INFO [data.preprocess_data:448] Dropped 3 columns with no variance
+[2025-06-04 17:01:09] INFO [data.preprocess_data:451] Columns dropped due to no variance: ['ipaddress', 'status', 'signature']
+[2025-06-04 17:01:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:01:09] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 17:01:09] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 17:01:09] INFO [data.preprocess_data:523] Number of duplicate rows: 0
+[2025-06-04 17:01:09] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (1770, 3)
+[2025-06-04 17:01:09] INFO [data.preprocess_data:530] Final columns: ['_time', 'targetusername', 'ipport']
+[2025-06-04 17:01:09] INFO [data.process_and_load_csv:998] Registering CSV file in database: data/FISHCM_AUTHENTICATE_CHECKPOINT.csv
+[2025-06-04 17:01:09] INFO [data.register_csv_file:624] Created new file registration with ID: 2
+[2025-06-04 17:01:09] INFO [data.process_and_load_csv:1017] Starting to save processed data to database
+[2025-06-04 17:01:10] INFO [data.save_processed_data_to_db:811] Creating new table: FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 17:01:10] INFO [data.save_processed_data_to_db:820] Saving data with 3 columns: ['_time', 'targetusername', 'ipport']
+[2025-06-04 17:01:10] INFO [data.save_processed_data_to_db:841] Dropped existing table: FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 17:01:10] INFO [data.save_processed_data_to_db:875] Column '_time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:01:10] INFO [data.save_processed_data_to_db:875] Column 'targetusername' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:01:10] INFO [data.save_processed_data_to_db:875] Column 'ipport' mapped to SQL type: BIGINT
+[2025-06-04 17:01:10] INFO [data.save_processed_data_to_db:887] Created new table: FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 17:01:10] INFO [data.save_processed_data_to_db:897] Starting bulk insert operation...
+[2025-06-04 17:01:10] INFO [data.bulk_insert_to_db:637] Starting bulk insert for table: FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 17:01:10] INFO [data.bulk_insert_to_db:653] Found 5 columns in target table
+[2025-06-04 17:01:10] INFO [data.bulk_insert_to_db:699] Inserting batch 1/1 (1770 rows)
+[2025-06-04 17:01:11] INFO [data.bulk_insert_to_db:714] Completed bulk insert to FISHCM_AUTHENTICATE_CHECKPOINT in 0.940936803817749
+[2025-06-04 17:01:11] INFO [data.save_processed_data_to_db:906] 
+Processing Time Summary:
+[2025-06-04 17:01:11] INFO [data.save_processed_data_to_db:913] table_preparation    0.03s        3.0%
+[2025-06-04 17:01:11] INFO [data.save_processed_data_to_db:913] table_drop           0.05s        4.3%
+[2025-06-04 17:01:11] INFO [data.save_processed_data_to_db:913] schema_creation      0.09s        8.2%
+[2025-06-04 17:01:11] INFO [data.save_processed_data_to_db:913] bulk_insert          0.95s       84.1%
+[2025-06-04 17:01:11] INFO [data.save_processed_data_to_db:917] Total time           1.13s      100.0%
+
+[2025-06-04 17:01:11] INFO [data.process_and_load_csv:1026] Successfully processed 1770 records into FISHCM_AUTHENTICATE_CHECKPOINT
+[2025-06-04 17:01:11] INFO [data.process_and_load_csv:1027] Processing times: {'table_preparation': 0.03, 'table_drop': 0.05, 'schema_creation': 0.09, 'bulk_insert': 0.95, 'total_time': 1.13}
+[2025-06-04 17:01:11] INFO [data.load_data_endpoint:1086] Successfully processed CSV file: data/FISHCM_AUTHENTICATE_CHECKPOINT.csv
+[2025-06-04 17:01:30] INFO [data.parse_request_params:1351] Parsing request parameters...
+[2025-06-04 17:01:30] INFO [data.parse_request_params:1355] Found JSON data in request
+[2025-06-04 17:01:30] INFO [data.parse_request_params:1362] Parsed parameters from JSON: file_path=data/FISHCM_FILESERV_LOGIN.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 17:01:30] INFO [data.load_data_endpoint:1060] Data load request - file_path: data/FISHCM_FILESERV_LOGIN.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 17:01:30] INFO [data.process_and_load_csv:962] Starting to process CSV file: data/FISHCM_FILESERV_LOGIN.csv
+[2025-06-04 17:01:30] INFO [data.process_and_load_csv:963] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 17:01:30] INFO [data.process_and_load_csv:978] Preprocessing CSV file: data/FISHCM_FILESERV_LOGIN.csv
+[2025-06-04 17:01:30] INFO [data.preprocess_data:405] Small file detected (7.76 MB). Processing normally...
+[2025-06-04 17:01:30] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 17:01:30] INFO [data.preprocess_data:434] Original dataset shape: (54886, 8)
+[2025-06-04 17:01:30] INFO [data.preprocess_data:440] Deduplicated columns: ['_time', 'computer', 'user', 'workstationname', 'source_workstation', 'ipaddress', 'name', 'event_count']
+[2025-06-04 17:01:31] INFO [data.preprocess_data:488] Column 'workstationname' equals to columns ['source_workstation'] - keeping 'workstationname'
+[2025-06-04 17:01:31] INFO [data.preprocess_data:495] Dropped 1 duplicate columns
+[2025-06-04 17:01:31] INFO [data.preprocess_data:498] Columns dropped due to duplication: ['source_workstation']
+[2025-06-04 17:01:31] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:01:31] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 17:01:31] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 17:01:31] INFO [data.preprocess_data:523] Number of duplicate rows: 0
+[2025-06-04 17:01:31] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (54886, 7)
+[2025-06-04 17:01:31] INFO [data.preprocess_data:530] Final columns: ['_time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 17:01:31] INFO [data.process_and_load_csv:998] Registering CSV file in database: data/FISHCM_FILESERV_LOGIN.csv
+[2025-06-04 17:01:31] INFO [data.register_csv_file:624] Created new file registration with ID: 3
+[2025-06-04 17:01:31] INFO [data.process_and_load_csv:1017] Starting to save processed data to database
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:811] Creating new table: FISHCM_FILESERV_LOGIN
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:820] Saving data with 7 columns: ['_time', 'computer', 'user', 'workstationname', 'ipaddress', 'name', 'event_count']
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:841] Dropped existing table: FISHCM_FILESERV_LOGIN
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:875] Column '_time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:875] Column 'computer' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:875] Column 'user' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:875] Column 'workstationname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:875] Column 'ipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:875] Column 'name' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:875] Column 'event_count' mapped to SQL type: BIGINT
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:887] Created new table: FISHCM_FILESERV_LOGIN
+[2025-06-04 17:01:31] INFO [data.save_processed_data_to_db:897] Starting bulk insert operation...
+[2025-06-04 17:01:31] INFO [data.bulk_insert_to_db:637] Starting bulk insert for table: FISHCM_FILESERV_LOGIN
+[2025-06-04 17:01:31] INFO [data.bulk_insert_to_db:653] Found 9 columns in target table
+[2025-06-04 17:01:35] INFO [data.bulk_insert_to_db:699] Inserting batch 1/6 (10000 rows)
+[2025-06-04 17:01:38] INFO [data.bulk_insert_to_db:699] Inserting batch 2/6 (10000 rows)
+[2025-06-04 17:01:41] INFO [data.bulk_insert_to_db:699] Inserting batch 3/6 (10000 rows)
+[2025-06-04 17:01:44] INFO [data.bulk_insert_to_db:699] Inserting batch 4/6 (10000 rows)
+[2025-06-04 17:01:47] INFO [data.bulk_insert_to_db:699] Inserting batch 5/6 (10000 rows)
+[2025-06-04 17:01:50] INFO [data.bulk_insert_to_db:699] Inserting batch 6/6 (4886 rows)
+[2025-06-04 17:01:51] INFO [data.bulk_insert_to_db:714] Completed bulk insert to FISHCM_FILESERV_LOGIN in 19.703484058380127
+[2025-06-04 17:01:51] INFO [data.save_processed_data_to_db:906] 
+Processing Time Summary:
+[2025-06-04 17:01:51] INFO [data.save_processed_data_to_db:913] table_preparation    0.01s        0.0%
+[2025-06-04 17:01:51] INFO [data.save_processed_data_to_db:913] table_drop           0.03s        0.1%
+[2025-06-04 17:01:51] INFO [data.save_processed_data_to_db:913] schema_creation      0.29s        1.4%
+[2025-06-04 17:01:51] INFO [data.save_processed_data_to_db:913] bulk_insert          19.74s       98.3%
+[2025-06-04 17:01:51] INFO [data.save_processed_data_to_db:917] Total time           20.08s      100.0%
+
+[2025-06-04 17:01:51] INFO [data.process_and_load_csv:1026] Successfully processed 54886 records into FISHCM_FILESERV_LOGIN
+[2025-06-04 17:01:51] INFO [data.process_and_load_csv:1027] Processing times: {'table_preparation': 0.01, 'table_drop': 0.03, 'schema_creation': 0.29, 'bulk_insert': 19.74, 'total_time': 20.08}
+[2025-06-04 17:01:51] INFO [data.load_data_endpoint:1086] Successfully processed CSV file: data/FISHCM_FILESERV_LOGIN.csv
+[2025-06-04 17:02:17] INFO [data.parse_request_params:1351] Parsing request parameters...
+[2025-06-04 17:02:17] INFO [data.parse_request_params:1355] Found JSON data in request
+[2025-06-04 17:02:17] INFO [data.parse_request_params:1362] Parsed parameters from JSON: file_path=data/FISHCM_VPN_ALERT.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 17:02:17] INFO [data.load_data_endpoint:1060] Data load request - file_path: data/FISHCM_VPN_ALERT.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 17:02:17] INFO [data.process_and_load_csv:962] Starting to process CSV file: data/FISHCM_VPN_ALERT.csv
+[2025-06-04 17:02:17] INFO [data.process_and_load_csv:963] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 17:02:17] INFO [data.process_and_load_csv:978] Preprocessing CSV file: data/FISHCM_VPN_ALERT.csv
+[2025-06-04 17:02:17] INFO [data.preprocess_data:405] Small file detected (15.86 MB). Processing normally...
+[2025-06-04 17:02:17] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 17:02:18] INFO [data.preprocess_data:434] Original dataset shape: (80673, 11)
+[2025-06-04 17:02:18] INFO [data.preprocess_data:440] Deduplicated columns: ['_time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid', 'proxypolicyname', 'authenticationserver', 'authenticationtype']
+[2025-06-04 17:02:18] INFO [data.preprocess_data:448] Dropped 3 columns with no variance
+[2025-06-04 17:02:18] INFO [data.preprocess_data:451] Columns dropped due to no variance: ['proxypolicyname', 'authenticationserver', 'authenticationtype']
+[2025-06-04 17:02:19] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:02:19] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 17:02:19] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 17:02:19] INFO [data.preprocess_data:523] Number of duplicate rows: 10
+[2025-06-04 17:02:19] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (80673, 8)
+[2025-06-04 17:02:19] INFO [data.preprocess_data:530] Final columns: ['_time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid']
+[2025-06-04 17:02:19] INFO [data.process_and_load_csv:998] Registering CSV file in database: data/FISHCM_VPN_ALERT.csv
+[2025-06-04 17:02:19] INFO [data.register_csv_file:624] Created new file registration with ID: 4
+[2025-06-04 17:02:19] INFO [data.process_and_load_csv:1017] Starting to save processed data to database
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:811] Creating new table: FISHCM_VPN_ALERT
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:820] Saving data with 8 columns: ['_time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid']
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:841] Dropped existing table: FISHCM_VPN_ALERT
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:875] Column '_time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:875] Column 'src_user' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:875] Column 'fullyqualifiedsubjectusername' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:875] Column 'clientname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:875] Column 'clientipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:875] Column 'nasidentifier' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:875] Column 'nasport' mapped to SQL type: BIGINT
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:875] Column 'callingstationid' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:887] Created new table: FISHCM_VPN_ALERT
+[2025-06-04 17:02:19] INFO [data.save_processed_data_to_db:897] Starting bulk insert operation...
+[2025-06-04 17:02:19] INFO [data.bulk_insert_to_db:637] Starting bulk insert for table: FISHCM_VPN_ALERT
+[2025-06-04 17:02:20] INFO [data.bulk_insert_to_db:653] Found 10 columns in target table
+[2025-06-04 17:02:26] INFO [data.bulk_insert_to_db:699] Inserting batch 1/9 (10000 rows)
+[2025-06-04 17:02:29] INFO [data.bulk_insert_to_db:699] Inserting batch 2/9 (10000 rows)
+[2025-06-04 17:02:32] INFO [data.bulk_insert_to_db:699] Inserting batch 3/9 (10000 rows)
+[2025-06-04 17:02:35] INFO [data.bulk_insert_to_db:699] Inserting batch 4/9 (10000 rows)
+[2025-06-04 17:02:37] INFO [data.bulk_insert_to_db:699] Inserting batch 5/9 (10000 rows)
+[2025-06-04 17:02:40] INFO [data.bulk_insert_to_db:699] Inserting batch 6/9 (10000 rows)
+[2025-06-04 17:02:43] INFO [data.bulk_insert_to_db:699] Inserting batch 7/9 (10000 rows)
+[2025-06-04 17:02:48] INFO [data.bulk_insert_to_db:699] Inserting batch 8/9 (10000 rows)
+[2025-06-04 17:02:53] INFO [data.bulk_insert_to_db:699] Inserting batch 9/9 (673 rows)
+[2025-06-04 17:02:54] INFO [data.bulk_insert_to_db:714] Completed bulk insert to FISHCM_VPN_ALERT in 34.317660331726074
+[2025-06-04 17:02:54] INFO [data.save_processed_data_to_db:906] 
+Processing Time Summary:
+[2025-06-04 17:02:54] INFO [data.save_processed_data_to_db:913] table_preparation    0.06s        0.2%
+[2025-06-04 17:02:54] INFO [data.save_processed_data_to_db:913] table_drop           0.06s        0.2%
+[2025-06-04 17:02:54] INFO [data.save_processed_data_to_db:913] schema_creation      0.36s        1.0%
+[2025-06-04 17:02:54] INFO [data.save_processed_data_to_db:913] bulk_insert          34.34s       98.6%
+[2025-06-04 17:02:54] INFO [data.save_processed_data_to_db:917] Total time           34.82s      100.0%
+
+[2025-06-04 17:02:54] INFO [data.process_and_load_csv:1026] Successfully processed 80673 records into FISHCM_VPN_ALERT
+[2025-06-04 17:02:54] INFO [data.process_and_load_csv:1027] Processing times: {'table_preparation': 0.06, 'table_drop': 0.06, 'schema_creation': 0.36, 'bulk_insert': 34.34, 'total_time': 34.82}
+[2025-06-04 17:02:54] INFO [data.load_data_endpoint:1086] Successfully processed CSV file: data/FISHCM_VPN_ALERT.csv
+[2025-06-04 17:03:15] INFO [data.parse_request_params:1351] Parsing request parameters...
+[2025-06-04 17:03:15] INFO [data.parse_request_params:1355] Found JSON data in request
+[2025-06-04 17:03:15] INFO [data.parse_request_params:1362] Parsed parameters from JSON: file_path=data/FISHCM_VPN_Unsuccessful.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 17:03:16] INFO [data.load_data_endpoint:1060] Data load request - file_path: data/FISHCM_VPN_Unsuccessful.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 17:03:16] INFO [data.process_and_load_csv:962] Starting to process CSV file: data/FISHCM_VPN_Unsuccessful.csv
+[2025-06-04 17:03:16] INFO [data.process_and_load_csv:963] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 17:03:16] INFO [data.process_and_load_csv:978] Preprocessing CSV file: data/FISHCM_VPN_Unsuccessful.csv
+[2025-06-04 17:03:16] INFO [data.preprocess_data:405] Small file detected (4.17 MB). Processing normally...
+[2025-06-04 17:03:16] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 17:03:16] INFO [data.preprocess_data:434] Original dataset shape: (14136, 12)
+[2025-06-04 17:03:16] INFO [data.preprocess_data:440] Deduplicated columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid', 'authenticationserver', 'authenticationtype', 'status', 'reason']
+[2025-06-04 17:03:17] INFO [data.preprocess_data:448] Dropped 2 columns with no variance
+[2025-06-04 17:03:17] INFO [data.preprocess_data:451] Columns dropped due to no variance: ['authenticationserver', 'status']
+[2025-06-04 17:03:17] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:17] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 17:03:17] INFO [data.preprocess_data:517] 
+src_user    1
+dtype: int64
+[2025-06-04 17:03:17] INFO [data.preprocess_data:523] Number of duplicate rows: 2826
+[2025-06-04 17:03:17] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (14136, 10)
+[2025-06-04 17:03:17] INFO [data.preprocess_data:530] Final columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid', 'authenticationtype', 'reason']
+[2025-06-04 17:03:17] INFO [data.process_and_load_csv:998] Registering CSV file in database: data/FISHCM_VPN_Unsuccessful.csv
+[2025-06-04 17:03:17] INFO [data.register_csv_file:624] Created new file registration with ID: 5
+[2025-06-04 17:03:17] INFO [data.process_and_load_csv:1017] Starting to save processed data to database
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:811] Creating new table: FISHCM_VPN_Unsuccessful
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:820] Saving data with 10 columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid', 'authenticationtype', 'reason']
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:841] Dropped existing table: FISHCM_VPN_Unsuccessful
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:875] Column 'time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:875] Column 'src_user' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:875] Column 'fullyqualifiedsubjectusername' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:875] Column 'clientname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:875] Column 'clientipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:875] Column 'nasidentifier' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:875] Column 'nasport' mapped to SQL type: BIGINT
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:875] Column 'callingstationid' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:875] Column 'authenticationtype' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:875] Column 'reason' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:887] Created new table: FISHCM_VPN_Unsuccessful
+[2025-06-04 17:03:17] INFO [data.save_processed_data_to_db:897] Starting bulk insert operation...
+[2025-06-04 17:03:17] INFO [data.bulk_insert_to_db:637] Starting bulk insert for table: FISHCM_VPN_Unsuccessful
+[2025-06-04 17:03:18] INFO [data.bulk_insert_to_db:653] Found 12 columns in target table
+[2025-06-04 17:03:19] INFO [data.bulk_insert_to_db:699] Inserting batch 1/2 (10000 rows)
+[2025-06-04 17:03:22] INFO [data.bulk_insert_to_db:699] Inserting batch 2/2 (4136 rows)
+[2025-06-04 17:03:24] INFO [data.bulk_insert_to_db:714] Completed bulk insert to FISHCM_VPN_Unsuccessful in 6.76688027381897
+[2025-06-04 17:03:24] INFO [data.save_processed_data_to_db:906] 
+Processing Time Summary:
+[2025-06-04 17:03:24] INFO [data.save_processed_data_to_db:913] table_preparation    0.00s        0.1%
+[2025-06-04 17:03:24] INFO [data.save_processed_data_to_db:913] table_drop           0.06s        0.9%
+[2025-06-04 17:03:24] INFO [data.save_processed_data_to_db:913] schema_creation      0.18s        2.6%
+[2025-06-04 17:03:24] INFO [data.save_processed_data_to_db:913] bulk_insert          6.77s       96.4%
+[2025-06-04 17:03:24] INFO [data.save_processed_data_to_db:917] Total time           7.03s      100.0%
+
+[2025-06-04 17:03:24] INFO [data.process_and_load_csv:1026] Successfully processed 14136 records into FISHCM_VPN_Unsuccessful
+[2025-06-04 17:03:24] INFO [data.process_and_load_csv:1027] Processing times: {'table_preparation': 0.0, 'table_drop': 0.06, 'schema_creation': 0.18, 'bulk_insert': 6.77, 'total_time': 7.03}
+[2025-06-04 17:03:24] INFO [data.load_data_endpoint:1086] Successfully processed CSV file: data/FISHCM_VPN_Unsuccessful.csv
+[2025-06-04 17:03:44] INFO [data.parse_request_params:1351] Parsing request parameters...
+[2025-06-04 17:03:44] INFO [data.parse_request_params:1355] Found JSON data in request
+[2025-06-04 17:03:44] INFO [data.parse_request_params:1362] Parsed parameters from JSON: file_path=data/FISHCM_Wifi_All_Login.csv, batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 17:03:44] INFO [data.load_data_endpoint:1060] Data load request - file_path: data/FISHCM_Wifi_All_Login.csv, batch_size: 1000, max_rows: None, target_table: None
+[2025-06-04 17:03:44] INFO [data.process_and_load_csv:962] Starting to process CSV file: data/FISHCM_Wifi_All_Login.csv
+[2025-06-04 17:03:44] INFO [data.process_and_load_csv:963] Parameters: batch_size=1000, max_rows=None, target_table=None
+[2025-06-04 17:03:44] INFO [data.process_and_load_csv:978] Preprocessing CSV file: data/FISHCM_Wifi_All_Login.csv
+[2025-06-04 17:03:44] INFO [data.preprocess_data:400] Large file detected (215.37 MB). Using parallel processing...
+[2025-06-04 17:03:44] INFO [data.process_in_parallel:326] Starting parallel processing with 4 workers
+[2025-06-04 17:03:44] INFO [data.process_in_parallel:332] Detected delimiter: ','
+[2025-06-04 17:03:50] INFO [data.process_in_parallel:337] Total chunks to process: 1 (105 rows)
+[2025-06-04 17:03:54] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:54] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:54] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:55] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:55] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:55] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:55] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:55] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:56] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:57] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:57] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:57] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:57] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:57] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:58] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:03:59] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:00] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:01] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:01] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:01] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:02] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:03] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:03] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:03] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:03] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:04] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:04] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:05] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:06] INFO [data.process_in_parallel:354] Successfully processed chunk 1/105
+[2025-06-04 17:04:06] INFO [data.process_in_parallel:354] Successfully processed chunk 2/105
+[2025-06-04 17:04:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:06] INFO [data.process_in_parallel:354] Successfully processed chunk 3/105
+[2025-06-04 17:04:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:06] INFO [data.process_in_parallel:354] Successfully processed chunk 4/105
+[2025-06-04 17:04:06] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:07] INFO [data.process_in_parallel:354] Successfully processed chunk 5/105
+[2025-06-04 17:04:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:07] INFO [data.process_in_parallel:354] Successfully processed chunk 6/105
+[2025-06-04 17:04:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:07] INFO [data.process_in_parallel:354] Successfully processed chunk 7/105
+[2025-06-04 17:04:07] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:08] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 8/105
+[2025-06-04 17:04:08] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:08] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:08] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 9/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 10/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 11/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 12/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 13/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 14/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 15/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 16/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 17/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 18/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 19/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 20/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 21/105
+[2025-06-04 17:04:08] INFO [data.process_in_parallel:354] Successfully processed chunk 22/105
+[2025-06-04 17:04:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:09] INFO [data.process_in_parallel:354] Successfully processed chunk 23/105
+[2025-06-04 17:04:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:09] INFO [data.process_in_parallel:354] Successfully processed chunk 24/105
+[2025-06-04 17:04:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:09] INFO [data.process_in_parallel:354] Successfully processed chunk 25/105
+[2025-06-04 17:04:09] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:10] INFO [data.process_in_parallel:354] Successfully processed chunk 26/105
+[2025-06-04 17:04:10] INFO [data.process_in_parallel:354] Successfully processed chunk 27/105
+[2025-06-04 17:04:10] INFO [data.process_in_parallel:354] Successfully processed chunk 28/105
+[2025-06-04 17:04:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:10] INFO [data.process_in_parallel:354] Successfully processed chunk 29/105
+[2025-06-04 17:04:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:10] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:10] INFO [data.process_in_parallel:354] Successfully processed chunk 30/105
+[2025-06-04 17:04:11] INFO [data.process_in_parallel:354] Successfully processed chunk 31/105
+[2025-06-04 17:04:11] INFO [data.process_in_parallel:354] Successfully processed chunk 32/105
+[2025-06-04 17:04:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:11] INFO [data.process_in_parallel:354] Successfully processed chunk 33/105
+[2025-06-04 17:04:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:11] INFO [data.process_in_parallel:354] Successfully processed chunk 34/105
+[2025-06-04 17:04:11] INFO [data.process_in_parallel:354] Successfully processed chunk 35/105
+[2025-06-04 17:04:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:11] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 36/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 37/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 38/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 39/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 40/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 41/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 42/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 43/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 44/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 45/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 46/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 47/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 48/105
+[2025-06-04 17:04:12] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 49/105
+[2025-06-04 17:04:12] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 50/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 51/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 52/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 53/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 54/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 55/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 56/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 57/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 58/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 59/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 60/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 61/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 62/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 63/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 64/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 65/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 66/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 67/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 68/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 69/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 70/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 71/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 72/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 73/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 74/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 75/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 76/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 77/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 78/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 79/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 80/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 81/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 82/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 83/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 84/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 85/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 86/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 87/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 88/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 89/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 90/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 91/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 92/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 93/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 94/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 95/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 96/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 97/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 98/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 99/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 100/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 101/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 102/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 103/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 104/105
+[2025-06-04 17:04:12] INFO [data.process_in_parallel:354] Successfully processed chunk 105/105
+[2025-06-04 17:04:13] INFO [data.process_in_parallel:366] Combining processed chunks...
+[2025-06-04 17:04:15] INFO [data.process_in_parallel:373] Removed 2814 duplicate rows from final dataset
+[2025-06-04 17:04:15] INFO [data.process_and_load_csv:998] Registering CSV file in database: data/FISHCM_Wifi_All_Login.csv
+[2025-06-04 17:04:15] INFO [data.register_csv_file:624] Created new file registration with ID: 6
+[2025-06-04 17:04:15] INFO [data.process_and_load_csv:1017] Starting to save processed data to database
+[2025-06-04 17:04:15] INFO [data.save_processed_data_to_db:811] Creating new table: FISHCM_Wifi_All_Login
+[2025-06-04 17:04:15] INFO [data.save_processed_data_to_db:820] Saving data with 8 columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid']
+[2025-06-04 17:04:15] INFO [data.save_processed_data_to_db:841] Dropped existing table: FISHCM_Wifi_All_Login
+[2025-06-04 17:04:16] INFO [data.save_processed_data_to_db:875] Column 'time' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:04:17] INFO [data.save_processed_data_to_db:875] Column 'src_user' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:04:17] INFO [data.save_processed_data_to_db:875] Column 'fullyqualifiedsubjectusername' mapped to SQL type: NVARCHAR(255)
+[2025-06-04 17:04:18] INFO [data.save_processed_data_to_db:875] Column 'clientname' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:04:18] INFO [data.save_processed_data_to_db:875] Column 'clientipaddress' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:04:18] INFO [data.save_processed_data_to_db:875] Column 'nasidentifier' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:04:19] INFO [data.save_processed_data_to_db:875] Column 'nasport' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:04:19] INFO [data.save_processed_data_to_db:875] Column 'callingstationid' mapped to SQL type: NVARCHAR(50)
+[2025-06-04 17:04:19] INFO [data.save_processed_data_to_db:887] Created new table: FISHCM_Wifi_All_Login
+[2025-06-04 17:04:19] INFO [data.save_processed_data_to_db:897] Starting bulk insert operation...
+[2025-06-04 17:04:19] INFO [data.bulk_insert_to_db:637] Starting bulk insert for table: FISHCM_Wifi_All_Login
+[2025-06-04 17:04:20] INFO [data.bulk_insert_to_db:653] Found 10 columns in target table
+[2025-06-04 17:05:28] INFO [data.bulk_insert_to_db:699] Inserting batch 1/105 (10000 rows)
+[2025-06-04 17:05:44] INFO [data.bulk_insert_to_db:699] Inserting batch 2/105 (10000 rows)
+[2025-06-04 17:05:53] INFO [data.bulk_insert_to_db:699] Inserting batch 3/105 (10000 rows)
+[2025-06-04 17:06:17] INFO [data.bulk_insert_to_db:699] Inserting batch 4/105 (10000 rows)
+[2025-06-04 17:06:32] INFO [data.bulk_insert_to_db:699] Inserting batch 5/105 (10000 rows)
+[2025-06-04 17:06:47] INFO [data.bulk_insert_to_db:699] Inserting batch 6/105 (10000 rows)
+[2025-06-04 17:06:52] INFO [data.bulk_insert_to_db:699] Inserting batch 7/105 (10000 rows)
+[2025-06-04 17:07:09] INFO [data.bulk_insert_to_db:699] Inserting batch 8/105 (10000 rows)
+[2025-06-04 17:07:31] INFO [data.bulk_insert_to_db:699] Inserting batch 9/105 (10000 rows)
+[2025-06-04 17:07:41] INFO [data.bulk_insert_to_db:699] Inserting batch 10/105 (10000 rows)
+[2025-06-04 17:07:51] INFO [data.bulk_insert_to_db:699] Inserting batch 11/105 (10000 rows)
+[2025-06-04 17:07:57] INFO [data.bulk_insert_to_db:699] Inserting batch 12/105 (10000 rows)
+[2025-06-04 17:08:13] INFO [data.bulk_insert_to_db:699] Inserting batch 13/105 (10000 rows)
+[2025-06-04 17:08:28] INFO [data.bulk_insert_to_db:699] Inserting batch 14/105 (10000 rows)
+[2025-06-04 17:08:40] INFO [data.bulk_insert_to_db:699] Inserting batch 15/105 (10000 rows)
+[2025-06-04 17:08:52] INFO [data.bulk_insert_to_db:699] Inserting batch 16/105 (10000 rows)
+[2025-06-04 17:09:02] INFO [data.bulk_insert_to_db:699] Inserting batch 17/105 (10000 rows)
+[2025-06-04 17:09:21] INFO [data.bulk_insert_to_db:699] Inserting batch 18/105 (10000 rows)
+[2025-06-04 17:09:36] INFO [data.bulk_insert_to_db:699] Inserting batch 19/105 (10000 rows)
+[2025-06-04 17:09:50] INFO [data.bulk_insert_to_db:699] Inserting batch 20/105 (10000 rows)
+[2025-06-04 17:09:59] INFO [data.bulk_insert_to_db:699] Inserting batch 21/105 (10000 rows)
+[2025-06-04 17:10:07] INFO [data.bulk_insert_to_db:699] Inserting batch 22/105 (10000 rows)
+[2025-06-04 17:10:14] INFO [data.bulk_insert_to_db:699] Inserting batch 23/105 (10000 rows)
+[2025-06-04 17:10:29] INFO [data.bulk_insert_to_db:699] Inserting batch 24/105 (10000 rows)
+[2025-06-04 17:10:38] INFO [data.bulk_insert_to_db:699] Inserting batch 25/105 (10000 rows)
+[2025-06-04 17:10:54] INFO [data.bulk_insert_to_db:699] Inserting batch 26/105 (10000 rows)
+[2025-06-04 17:11:05] INFO [data.bulk_insert_to_db:699] Inserting batch 27/105 (10000 rows)
+[2025-06-04 17:11:13] INFO [data.bulk_insert_to_db:699] Inserting batch 28/105 (10000 rows)
+[2025-06-04 17:11:35] INFO [data.bulk_insert_to_db:699] Inserting batch 29/105 (10000 rows)
+[2025-06-04 17:11:58] INFO [data.bulk_insert_to_db:699] Inserting batch 30/105 (10000 rows)
+[2025-06-04 17:12:15] INFO [data.bulk_insert_to_db:699] Inserting batch 31/105 (10000 rows)
+[2025-06-04 17:12:23] INFO [data.bulk_insert_to_db:699] Inserting batch 32/105 (10000 rows)
+[2025-06-04 17:12:45] INFO [data.bulk_insert_to_db:699] Inserting batch 33/105 (10000 rows)
+[2025-06-04 17:13:07] INFO [data.bulk_insert_to_db:699] Inserting batch 34/105 (10000 rows)
+[2025-06-04 17:13:22] INFO [data.bulk_insert_to_db:699] Inserting batch 35/105 (10000 rows)
+[2025-06-04 17:13:37] INFO [data.bulk_insert_to_db:699] Inserting batch 36/105 (10000 rows)
+[2025-06-04 17:14:00] INFO [data.bulk_insert_to_db:699] Inserting batch 37/105 (10000 rows)
+[2025-06-04 17:14:21] INFO [data.bulk_insert_to_db:699] Inserting batch 38/105 (10000 rows)
+[2025-06-04 17:14:28] INFO [data.bulk_insert_to_db:699] Inserting batch 39/105 (10000 rows)
+[2025-06-04 17:14:40] INFO [data.bulk_insert_to_db:699] Inserting batch 40/105 (10000 rows)
+[2025-06-04 17:15:00] INFO [data.bulk_insert_to_db:699] Inserting batch 41/105 (10000 rows)
+[2025-06-04 17:15:22] INFO [data.bulk_insert_to_db:699] Inserting batch 42/105 (10000 rows)
+[2025-06-04 17:15:28] INFO [data.bulk_insert_to_db:699] Inserting batch 43/105 (10000 rows)
+[2025-06-04 17:15:33] INFO [data.bulk_insert_to_db:699] Inserting batch 44/105 (10000 rows)
+[2025-06-04 17:15:38] INFO [data.bulk_insert_to_db:699] Inserting batch 45/105 (10000 rows)
+[2025-06-04 17:15:46] INFO [data.bulk_insert_to_db:699] Inserting batch 46/105 (10000 rows)
+[2025-06-04 17:15:54] INFO [data.bulk_insert_to_db:699] Inserting batch 47/105 (10000 rows)
+[2025-06-04 17:16:03] INFO [data.bulk_insert_to_db:699] Inserting batch 48/105 (10000 rows)
+[2025-06-04 17:16:10] INFO [data.bulk_insert_to_db:699] Inserting batch 49/105 (10000 rows)
+[2025-06-04 17:16:18] INFO [data.bulk_insert_to_db:699] Inserting batch 50/105 (10000 rows)
+[2025-06-04 17:16:26] INFO [data.bulk_insert_to_db:699] Inserting batch 51/105 (10000 rows)
+[2025-06-04 17:16:33] INFO [data.bulk_insert_to_db:699] Inserting batch 52/105 (10000 rows)
+[2025-06-04 17:16:38] INFO [data.bulk_insert_to_db:699] Inserting batch 53/105 (10000 rows)
+[2025-06-04 17:16:45] INFO [data.bulk_insert_to_db:699] Inserting batch 54/105 (10000 rows)
+[2025-06-04 17:16:51] INFO [data.bulk_insert_to_db:699] Inserting batch 55/105 (10000 rows)
+[2025-06-04 17:17:00] INFO [data.bulk_insert_to_db:699] Inserting batch 56/105 (10000 rows)
+[2025-06-04 17:17:08] INFO [data.bulk_insert_to_db:699] Inserting batch 57/105 (10000 rows)
+[2025-06-04 17:17:15] INFO [data.bulk_insert_to_db:699] Inserting batch 58/105 (10000 rows)
+[2025-06-04 17:17:23] INFO [data.bulk_insert_to_db:699] Inserting batch 59/105 (10000 rows)
+[2025-06-04 17:17:31] INFO [data.bulk_insert_to_db:699] Inserting batch 60/105 (10000 rows)
+[2025-06-04 17:17:40] INFO [data.bulk_insert_to_db:699] Inserting batch 61/105 (10000 rows)
+[2025-06-04 17:17:44] INFO [data.bulk_insert_to_db:699] Inserting batch 62/105 (10000 rows)
+[2025-06-04 17:17:50] INFO [data.bulk_insert_to_db:699] Inserting batch 63/105 (10000 rows)
+[2025-06-04 17:17:57] INFO [data.bulk_insert_to_db:699] Inserting batch 64/105 (10000 rows)
+[2025-06-04 17:18:07] INFO [data.bulk_insert_to_db:699] Inserting batch 65/105 (10000 rows)
+[2025-06-04 17:18:14] INFO [data.bulk_insert_to_db:699] Inserting batch 66/105 (10000 rows)
+[2025-06-04 17:18:23] INFO [data.bulk_insert_to_db:699] Inserting batch 67/105 (10000 rows)
+[2025-06-04 17:18:31] INFO [data.bulk_insert_to_db:699] Inserting batch 68/105 (10000 rows)
+[2025-06-04 17:18:39] INFO [data.bulk_insert_to_db:699] Inserting batch 69/105 (10000 rows)
+[2025-06-04 17:18:48] INFO [data.bulk_insert_to_db:699] Inserting batch 70/105 (10000 rows)
+[2025-06-04 17:18:52] INFO [data.bulk_insert_to_db:699] Inserting batch 71/105 (10000 rows)
+[2025-06-04 17:19:00] INFO [data.bulk_insert_to_db:699] Inserting batch 72/105 (10000 rows)
+[2025-06-04 17:19:08] INFO [data.bulk_insert_to_db:699] Inserting batch 73/105 (10000 rows)
+[2025-06-04 17:19:17] INFO [data.bulk_insert_to_db:699] Inserting batch 74/105 (10000 rows)
+[2025-06-04 17:19:26] INFO [data.bulk_insert_to_db:699] Inserting batch 75/105 (10000 rows)
+[2025-06-04 17:19:35] INFO [data.bulk_insert_to_db:699] Inserting batch 76/105 (10000 rows)
+[2025-06-04 17:19:42] INFO [data.bulk_insert_to_db:699] Inserting batch 77/105 (10000 rows)
+[2025-06-04 17:19:50] INFO [data.bulk_insert_to_db:699] Inserting batch 78/105 (10000 rows)
+[2025-06-04 17:19:56] INFO [data.bulk_insert_to_db:699] Inserting batch 79/105 (10000 rows)
+[2025-06-04 17:20:01] INFO [data.bulk_insert_to_db:699] Inserting batch 80/105 (10000 rows)
+[2025-06-04 17:20:09] INFO [data.bulk_insert_to_db:699] Inserting batch 81/105 (10000 rows)
+[2025-06-04 17:20:17] INFO [data.bulk_insert_to_db:699] Inserting batch 82/105 (10000 rows)
+[2025-06-04 17:20:26] INFO [data.bulk_insert_to_db:699] Inserting batch 83/105 (10000 rows)
+[2025-06-04 17:20:33] INFO [data.bulk_insert_to_db:699] Inserting batch 84/105 (10000 rows)
+[2025-06-04 17:20:42] INFO [data.bulk_insert_to_db:699] Inserting batch 85/105 (10000 rows)
+[2025-06-04 17:20:50] INFO [data.bulk_insert_to_db:699] Inserting batch 86/105 (10000 rows)
+[2025-06-04 17:20:58] INFO [data.bulk_insert_to_db:699] Inserting batch 87/105 (10000 rows)
+[2025-06-04 17:21:02] INFO [data.bulk_insert_to_db:699] Inserting batch 88/105 (10000 rows)
+[2025-06-04 17:21:11] INFO [data.bulk_insert_to_db:699] Inserting batch 89/105 (10000 rows)
+[2025-06-04 17:21:19] INFO [data.bulk_insert_to_db:699] Inserting batch 90/105 (10000 rows)
+[2025-06-04 17:21:28] INFO [data.bulk_insert_to_db:699] Inserting batch 91/105 (10000 rows)
+[2025-06-04 17:21:36] INFO [data.bulk_insert_to_db:699] Inserting batch 92/105 (10000 rows)
+[2025-06-04 17:21:44] INFO [data.bulk_insert_to_db:699] Inserting batch 93/105 (10000 rows)
+[2025-06-04 17:21:52] INFO [data.bulk_insert_to_db:699] Inserting batch 94/105 (10000 rows)
+[2025-06-04 17:22:00] INFO [data.bulk_insert_to_db:699] Inserting batch 95/105 (10000 rows)
+[2025-06-04 17:22:06] INFO [data.bulk_insert_to_db:699] Inserting batch 96/105 (10000 rows)
+[2025-06-04 17:22:10] INFO [data.bulk_insert_to_db:699] Inserting batch 97/105 (10000 rows)
+[2025-06-04 17:22:18] INFO [data.bulk_insert_to_db:699] Inserting batch 98/105 (10000 rows)
+[2025-06-04 17:22:26] INFO [data.bulk_insert_to_db:699] Inserting batch 99/105 (10000 rows)
+[2025-06-04 17:22:34] INFO [data.bulk_insert_to_db:699] Inserting batch 100/105 (10000 rows)
+[2025-06-04 17:22:41] INFO [data.bulk_insert_to_db:699] Inserting batch 101/105 (10000 rows)
+[2025-06-04 17:22:51] INFO [data.bulk_insert_to_db:699] Inserting batch 102/105 (10000 rows)
+[2025-06-04 17:23:07] INFO [data.bulk_insert_to_db:699] Inserting batch 103/105 (10000 rows)
+[2025-06-04 17:23:14] INFO [data.bulk_insert_to_db:699] Inserting batch 104/105 (10000 rows)
+[2025-06-04 17:23:22] INFO [data.bulk_insert_to_db:699] Inserting batch 105/105 (5761 rows)
+[2025-06-04 17:23:38] INFO [data.bulk_insert_to_db:714] Completed bulk insert to FISHCM_Wifi_All_Login in 1158.2523102760315
+[2025-06-04 17:23:38] INFO [data.save_processed_data_to_db:906] 
+Processing Time Summary:
+[2025-06-04 17:23:38] INFO [data.save_processed_data_to_db:913] table_preparation    0.00s        0.0%
+[2025-06-04 17:23:38] INFO [data.save_processed_data_to_db:913] table_drop           0.03s        0.0%
+[2025-06-04 17:23:38] INFO [data.save_processed_data_to_db:913] schema_creation      4.34s        0.4%
+[2025-06-04 17:23:38] INFO [data.save_processed_data_to_db:913] bulk_insert          1,158.41s       99.6%
+[2025-06-04 17:23:38] INFO [data.save_processed_data_to_db:917] Total time           1,162.79s      100.0%
+
+[2025-06-04 17:23:38] INFO [data.process_and_load_csv:1026] Successfully processed 1045761 records into FISHCM_Wifi_All_Login
+[2025-06-04 17:23:38] INFO [data.process_and_load_csv:1027] Processing times: {'table_preparation': 0.0, 'table_drop': 0.03, 'schema_creation': 4.34, 'bulk_insert': 1158.41, 'total_time': 1162.79}
+[2025-06-04 17:23:38] INFO [data.load_data_endpoint:1086] Successfully processed CSV file: data/FISHCM_Wifi_All_Login.csv
+[2025-06-04 17:23:46] INFO [data.parse_request_params:1351] Parsing request parameters...
+[2025-06-04 17:23:46] INFO [data.parse_request_params:1355] Found JSON data in request
+[2025-06-04 17:23:46] INFO [data.parse_request_params:1362] Parsed parameters from JSON: file_path=data/FISHCM_Wifi_All_Login_2.csv, batch_size=1000, max_rows=None, target_table=FISHCM_Wifi_All_Login
+[2025-06-04 17:23:46] INFO [data.load_data_endpoint:1060] Data load request - file_path: data/FISHCM_Wifi_All_Login_2.csv, batch_size: 1000, max_rows: None, target_table: FISHCM_Wifi_All_Login
+[2025-06-04 17:23:46] INFO [data.process_and_load_csv:962] Starting to process CSV file: data/FISHCM_Wifi_All_Login_2.csv
+[2025-06-04 17:23:46] INFO [data.process_and_load_csv:963] Parameters: batch_size=1000, max_rows=None, target_table=FISHCM_Wifi_All_Login
+[2025-06-04 17:23:46] INFO [data.process_and_load_csv:978] Preprocessing CSV file: data/FISHCM_Wifi_All_Login_2.csv
+[2025-06-04 17:23:46] INFO [data.preprocess_data:405] Small file detected (54.64 MB). Processing normally...
+[2025-06-04 17:23:46] INFO [data.preprocess_data:426] Detected delimiter: ','
+[2025-06-04 17:23:48] INFO [data.preprocess_data:434] Original dataset shape: (266587, 11)
+[2025-06-04 17:23:48] INFO [data.preprocess_data:440] Deduplicated columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid', 'proxypolicyname', 'authenticationserver', 'authenticationtype']
+[2025-06-04 17:23:48] INFO [data.preprocess_data:448] Dropped 3 columns with no variance
+[2025-06-04 17:23:48] INFO [data.preprocess_data:451] Columns dropped due to no variance: ['proxypolicyname', 'authenticationserver', 'authenticationtype']
+[2025-06-04 17:23:50] INFO [data.detect_noisy_columns:90] Noisy columns: []
+[2025-06-04 17:23:51] INFO [data.preprocess_data:514] Missing values in remaining columns:
+[2025-06-04 17:23:51] INFO [data.preprocess_data:517] 
+Series([], dtype: int64)
+[2025-06-04 17:23:51] INFO [data.preprocess_data:523] Number of duplicate rows: 533
+[2025-06-04 17:23:51] INFO [data.preprocess_data:527] Final preprocessed dataset shape: (266587, 8)
+[2025-06-04 17:23:51] INFO [data.preprocess_data:530] Final columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid']
+[2025-06-04 17:23:51] INFO [data.process_and_load_csv:998] Registering CSV file in database: data/FISHCM_Wifi_All_Login_2.csv
+[2025-06-04 17:23:51] INFO [data.register_csv_file:624] Created new file registration with ID: 7
+[2025-06-04 17:23:51] INFO [data.process_and_load_csv:1017] Starting to save processed data to database
+[2025-06-04 17:23:51] INFO [data.save_processed_data_to_db:802] Using existing table: FISHCM_Wifi_All_Login
+[2025-06-04 17:23:51] INFO [data.save_processed_data_to_db:820] Saving data with 8 columns: ['time', 'src_user', 'fullyqualifiedsubjectusername', 'clientname', 'clientipaddress', 'nasidentifier', 'nasport', 'callingstationid']
+[2025-06-04 17:23:51] INFO [data.save_processed_data_to_db:897] Starting bulk insert operation...
+[2025-06-04 17:23:51] INFO [data.bulk_insert_to_db:637] Starting bulk insert for table: FISHCM_Wifi_All_Login
+[2025-06-04 17:23:51] INFO [data.bulk_insert_to_db:653] Found 10 columns in target table
+[2025-06-04 17:24:09] INFO [data.bulk_insert_to_db:699] Inserting batch 1/27 (10000 rows)
+[2025-06-04 17:24:14] INFO [data.bulk_insert_to_db:699] Inserting batch 2/27 (10000 rows)
+[2025-06-04 17:24:20] INFO [data.bulk_insert_to_db:699] Inserting batch 3/27 (10000 rows)
+[2025-06-04 17:24:25] INFO [data.bulk_insert_to_db:699] Inserting batch 4/27 (10000 rows)
+[2025-06-04 17:24:31] INFO [data.bulk_insert_to_db:699] Inserting batch 5/27 (10000 rows)
+[2025-06-04 17:24:38] INFO [data.bulk_insert_to_db:699] Inserting batch 6/27 (10000 rows)
+[2025-06-04 17:24:47] INFO [data.bulk_insert_to_db:699] Inserting batch 7/27 (10000 rows)
+[2025-06-04 17:24:55] INFO [data.bulk_insert_to_db:699] Inserting batch 8/27 (10000 rows)
+[2025-06-04 17:25:04] INFO [data.bulk_insert_to_db:699] Inserting batch 9/27 (10000 rows)
+[2025-06-04 17:25:11] INFO [data.bulk_insert_to_db:699] Inserting batch 10/27 (10000 rows)
+[2025-06-04 17:25:20] INFO [data.bulk_insert_to_db:699] Inserting batch 11/27 (10000 rows)
+[2025-06-04 17:25:26] INFO [data.bulk_insert_to_db:699] Inserting batch 12/27 (10000 rows)
+[2025-06-04 17:25:32] INFO [data.bulk_insert_to_db:699] Inserting batch 13/27 (10000 rows)
+[2025-06-04 17:25:38] INFO [data.bulk_insert_to_db:699] Inserting batch 14/27 (10000 rows)
+[2025-06-04 17:25:46] INFO [data.bulk_insert_to_db:699] Inserting batch 15/27 (10000 rows)
+[2025-06-04 17:25:54] INFO [data.bulk_insert_to_db:699] Inserting batch 16/27 (10000 rows)
+[2025-06-04 17:26:03] INFO [data.bulk_insert_to_db:699] Inserting batch 17/27 (10000 rows)
+[2025-06-04 17:26:09] INFO [data.bulk_insert_to_db:699] Inserting batch 18/27 (10000 rows)
+[2025-06-04 17:26:15] INFO [data.bulk_insert_to_db:699] Inserting batch 19/27 (10000 rows)
+[2025-06-04 17:26:22] INFO [data.bulk_insert_to_db:699] Inserting batch 20/27 (10000 rows)
+[2025-06-04 17:26:29] INFO [data.bulk_insert_to_db:699] Inserting batch 21/27 (10000 rows)
+[2025-06-04 17:26:34] INFO [data.bulk_insert_to_db:699] Inserting batch 22/27 (10000 rows)
+[2025-06-04 17:26:42] INFO [data.bulk_insert_to_db:699] Inserting batch 23/27 (10000 rows)
+[2025-06-04 17:26:48] INFO [data.bulk_insert_to_db:699] Inserting batch 24/27 (10000 rows)
+[2025-06-04 17:26:57] INFO [data.bulk_insert_to_db:699] Inserting batch 25/27 (10000 rows)
+[2025-06-04 17:27:06] INFO [data.bulk_insert_to_db:699] Inserting batch 26/27 (10000 rows)
+[2025-06-04 17:27:14] INFO [data.bulk_insert_to_db:699] Inserting batch 27/27 (6587 rows)
+[2025-06-04 17:27:22] INFO [data.bulk_insert_to_db:714] Completed bulk insert to FISHCM_Wifi_All_Login in 210.8314015865326
+[2025-06-04 17:27:22] INFO [data.save_processed_data_to_db:906] 
+Processing Time Summary:
+[2025-06-04 17:27:22] INFO [data.save_processed_data_to_db:913] table_preparation    0.00s        0.0%
+[2025-06-04 17:27:22] INFO [data.save_processed_data_to_db:913] table_drop           0.00s        0.0%
+[2025-06-04 17:27:22] INFO [data.save_processed_data_to_db:913] schema_creation      0.00s        0.0%
+[2025-06-04 17:27:22] INFO [data.save_processed_data_to_db:913] bulk_insert          210.89s      100.0%
+[2025-06-04 17:27:22] INFO [data.save_processed_data_to_db:917] Total time           210.95s      100.0%
+
+[2025-06-04 17:27:22] INFO [data.process_and_load_csv:1026] Successfully processed 266587 records into FISHCM_Wifi_All_Login
+[2025-06-04 17:27:22] INFO [data.process_and_load_csv:1027] Processing times: {'table_preparation': 0.0, 'table_drop': 0, 'schema_creation': 0, 'bulk_insert': 210.89, 'total_time': 210.95}
+[2025-06-04 17:27:22] INFO [data.load_data_endpoint:1086] Successfully processed CSV file: data/FISHCM_Wifi_All_Login_2.csv
