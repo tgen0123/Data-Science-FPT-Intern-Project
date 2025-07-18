@@ -1,22 +1,8 @@
-# api_keys.py
-import secrets
-from flask import Blueprint, jsonify, request, g, current_app
-from functools import wraps
-import pyodbc
+from flask import Blueprint, jsonify, request
+from auth import require_api_key, generate_api_key, require_admin
+from database import get_db, get_cursor, dict_from_row
 
-from helper import get_db, get_cursor, dict_from_row, require_api_key, is_admin
-
-# Create a Blueprint for API routes
 api_bp = Blueprint('api', __name__, url_prefix='/api')
-
-def generate_api_key():
-    """
-    Generate a random API key.
-    
-    Returns:
-        str: A secure random API key string
-    """
-    return secrets.token_urlsafe(32)
 
 def create_new_api_key(username, rate_limit=100, is_admin=False):
     """
@@ -46,6 +32,8 @@ def create_new_api_key(username, rate_limit=100, is_admin=False):
 
 @api_bp.route('/key/generate', methods=['POST'])
 @require_api_key
+@require_admin
+
 def create_api_key():
     """
     Generate a new API key - restricted to admin users.
@@ -53,10 +41,6 @@ def create_api_key():
     This endpoint creates a new API key associated with the specified username
     and configuration. Access is restricted to API keys with admin privileges.
     """
-    if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-        
-    # Get info from request
     data = request.get_json()
     if not data or 'username' not in data:
         return jsonify({"error": "Username required"}), 400
@@ -82,6 +66,7 @@ def create_api_key():
 
 @api_bp.route('/key/<key>', methods=['GET'])
 @require_api_key
+@require_admin
 def get_api_key_details(key):
     """
     Get details about an API key - restricted to admin users.
@@ -89,9 +74,6 @@ def get_api_key_details(key):
     This endpoint retrieves detailed information about a specific API key.
     Access is restricted to API keys with admin privileges.
     """
-    if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-    
     try:
         cursor = get_cursor()
         cursor.execute('SELECT * FROM api_keys WHERE [key] = ?', (key,))
@@ -115,6 +97,7 @@ def get_api_key_details(key):
 
 @api_bp.route('/key/<key>', methods=['PUT'])
 @require_api_key
+@require_admin
 def update_api_key(key):
     """
     Update an API key's properties - restricted to admin users.
@@ -122,9 +105,6 @@ def update_api_key(key):
     This endpoint updates the properties of an existing API key.
     Access is restricted to API keys with admin privileges.
     """
-    if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-    
     data = request.get_json()
     if not data:
         return jsonify({"error": "No update data provided"}), 400
@@ -184,6 +164,7 @@ def update_api_key(key):
 
 @api_bp.route('/key/<key>', methods=['DELETE'])
 @require_api_key
+@require_admin
 def delete_api_key(key):
     """
     Delete an API key - restricted to admin users.
@@ -192,9 +173,6 @@ def delete_api_key(key):
     Access is restricted to API keys with admin privileges.
     The key being used for authentication cannot be deleted.
     """
-    if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-    
     # Don't allow deletion of the key being used
     current_key = request.headers.get('X-API-Key')
     if key == current_key:
@@ -227,6 +205,7 @@ def delete_api_key(key):
 
 @api_bp.route('/keys', methods=['GET'])
 @require_api_key
+@require_admin
 def list_api_keys():
     """
     List all API keys - restricted to admin users.
@@ -234,9 +213,6 @@ def list_api_keys():
     This endpoint retrieves all API keys in the system.
     Access is restricted to API keys with admin privileges.
     """
-    if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-    
     try:
         cursor = get_cursor()
         cursor.execute('SELECT * FROM api_keys')
@@ -279,6 +255,7 @@ def authenticate():
 
 @api_bp.route('/users', methods=['GET'])
 @require_api_key
+@require_admin
 def list_users():
     """
     List all users in the system (admin only).
@@ -286,9 +263,6 @@ def list_users():
     This endpoint retrieves a list of all unique usernames from the 
     vpn_logs table. It requires an API key with admin privileges.
     """
-    if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-    
     cursor = get_cursor()
     cursor.execute('SELECT DISTINCT username FROM vpn_logs')
     
@@ -301,6 +275,7 @@ def list_users():
 
 @api_bp.route('/stats', methods=['GET'])
 @require_api_key
+@require_admin
 def get_stats():
     """
     Get statistics about the database (admin only).
@@ -308,9 +283,6 @@ def get_stats():
     This endpoint provides various statistics about the database.
     Access is restricted to API keys with admin privileges.
     """
-    if not is_admin(request.api_user):
-        return jsonify({"error": "Unauthorized - Admin privileges required"}), 403
-    
     cursor = get_cursor()
     
     # Get user count
