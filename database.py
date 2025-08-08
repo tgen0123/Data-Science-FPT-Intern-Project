@@ -3,7 +3,7 @@ import pyodbc
 import traceback
 import pandas as pd
 from flask import g, current_app
-import utils
+import helper
 import numpy as np
 
 def initialize_schema():
@@ -95,9 +95,8 @@ def get_db():
             f"DRIVER={{ODBC Driver 17 for SQL Server}};"
             f"SERVER={current_app.config['SQLSERVER_HOST']};"
             f"DATABASE={current_app.config['SQLSERVER_DB']};"
-            # f"UID={current_app.config['SQLSERVER_USER']};"
-            # f"PWD={current_app.config['SQLSERVER_PASS']};"
-            f"Trusted_Connection=yes;"  # Use this for Windows Authentication
+            f"UID={current_app.config['SQLSERVER_USER']};"
+            f"PWD={current_app.config['SQLSERVER_PASS']};"
             "Encrypt=yes;"
             "TrustServerCertificate=yes;" 
         )
@@ -217,9 +216,9 @@ def register_csv_file(file_path, row_count, column_count, date_columns=None, ip_
         print(f"Preparing data for JSON serialization...")
         
         # Prepare info for storage
-        date_columns_json = utils.safe_json_dumps(date_columns) if date_columns else None
-        ip_columns_json = utils.safe_json_dumps(ip_columns) if ip_columns else None
-        datetime_separation_json = utils.safe_json_dumps(datetime_separation_info) if datetime_separation_info else None
+        date_columns_json = helper.safe_json_dumps(date_columns) if date_columns else None
+        ip_columns_json = helper.safe_json_dumps(ip_columns) if ip_columns else None
+        datetime_separation_json = helper.safe_json_dumps(datetime_separation_info) if datetime_separation_info else None
         
         # Check if this file is already registered
         cursor.execute('SELECT id FROM csv_registry WHERE file_path = ?', (file_path,))
@@ -364,7 +363,7 @@ def save_processed_data_to_db(processed_df, file_id, file_name, ip_detection_res
             column_mapping[col] = safe_col
         
         # Create the processed_data table
-        sanitized_name = utils.sanitize_for_table_name(file_name)
+        sanitized_name = helper.sanitize_for_table_name(file_name)
         table_name = sanitized_name
         
         cursor.execute(f'''
@@ -744,3 +743,60 @@ def get_table_columns(table_name):
         print(f"Error getting columns for table '{table_name}': {e}")
         traceback.print_exc()
         return {"error": str(e)}
+    
+# Add this function to database.py
+def table_exists(table_name):
+    """Checks if a table exists in the database."""
+    try:
+        cursor = get_cursor()
+        # Use SQL Server's INFORMATION_SCHEMA to check for the table
+        query = "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?"
+        cursor.execute(query, table_name)
+        return cursor.fetchone() is not None
+    except Exception as e:
+        print(f"Error checking if table '{table_name}' exists: {e}")
+        return False
+
+# Add this function to database.py. It's a generic version of your
+# save_processed_data_to_db function.
+def create_table_from_df(df, table_name):
+    """
+    Creates a new database table based on a DataFrame's schema and inserts the data.
+    """
+    try:
+        db = get_db()
+        cursor = db.cursor()
+
+        # Drop table if it somehow exists to ensure a clean slate
+        cursor.execute(f"IF OBJECT_ID(N'[dbo].[{table_name}]', N'U') IS NOT NULL DROP TABLE [dbo].[{table_name}]")
+        db.commit()
+
+        # --- This logic is adapted from your save_processed_data_to_db function ---
+        column_definitions = ["[id] INT IDENTITY(1,1) PRIMARY KEY"]
+        for col, dtype in df.dtypes.items():
+            safe_col = col.lower().replace(' ', '_').replace('-', '_').replace('.', '_')
+            sql_type = "NVARCHAR(MAX)" # Default type
+            if 'datetime64' in str(dtype):
+                sql_type = "DATETIME2"
+            elif 'float' in str(dtype):
+                sql_type = "FLOAT"
+            elif 'int' in str(dtype):
+                sql_type = "BIGINT"
+            elif 'bool' in str(dtype):
+                sql_type = "BIT"
+            column_definitions.append(f"[{safe_col}] {sql_type}")
+        column_definitions.append("[processed_at] DATETIME2 DEFAULT GETDATE()")
+
+        # Create the table
+        create_table_sql = f"CREATE TABLE [{table_name}] ({', '.join(column_definitions)})"
+        cursor.execute(create_table_sql)
+        db.commit()
+        print(f"Successfully created new table: '{table_name}'")
+
+        # Now, append the data to the newly created table
+        return append_to_existing_table(df, table_name)
+
+    except Exception as e:
+        print(f"Error creating table from DataFrame: {e}")
+        traceback.print_exc()
+        return {"error": str(e), "status_code": 500}

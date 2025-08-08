@@ -18,14 +18,12 @@ def create_app():
         Initializes the database. Nested to access 'app.config'.
         """
         try:
-            # Step 1: Connect to master DB to create the application DB if it doesn't exist.
             connection_string_master = (
                 f"DRIVER={{ODBC Driver 17 for SQL Server}};"
                 f"SERVER={app.config['SQLSERVER_HOST']};"
-                # f"UID={app.config['SQLSERVER_USER']};"
-                # f"PWD={app.config['SQLSERVER_PASS']};"
+                f"UID={app.config['SQLSERVER_USER']};"
+                f"PWD={app.config['SQLSERVER_PASS']};"
                 "DATABASE=master;"
-                f"Trusted_Connection=yes;"  # Use Windows Authentication
                 "TrustServerCertificate=yes;"
             )
             with pyodbc.connect(connection_string_master, autocommit=True) as conn_master:
@@ -36,12 +34,8 @@ def create_app():
                     cursor_master.execute(f"CREATE DATABASE {db_name}")
                     print(f"Database {db_name} created.")
 
-            # Step 2 & 3 need an application context to work with flask.g
             with app.app_context():
-                # Initialize the schema (create tables).
                 database.initialize_schema()
-
-                # Insert default data if necessary.
                 conn_app = database.get_db()
                 cursor_app = conn_app.cursor()
                 cursor_app.execute('SELECT COUNT(*) FROM api_keys')
@@ -83,20 +77,19 @@ def create_app():
             db.close()
 
     # --- Application Startup Logic ---
-    # Ensure data directory exists
     if not os.path.exists(app.config['DATA_DIRECTORY']):
         os.makedirs(app.config['DATA_DIRECTORY'])
         
-    init_db()  # Call the nested init function
+    init_db() 
 
-    # Register Blueprints
-    from api_keys import api_bp
-    from data_routes import data_bp
-    from webhook_handler import webhook_bp
+    # --- Register Blueprints ---
+    from api.keys import keys_bp
+    from api.data import data_bp
+    from api.splunk import splunk_bp
 
-    app.register_blueprint(api_bp)
+    app.register_blueprint(keys_bp)
     app.register_blueprint(data_bp)
-    app.register_blueprint(webhook_bp)
+    app.register_blueprint(splunk_bp)
 
     # --- Root Endpoints ---
     @app.route('/')
@@ -112,42 +105,25 @@ def create_app():
             "endpoints": [
                 "",
                 "API KEY MANAGEMENT ENDPOINTS",
-                "/api/authenticate - Test your API key",
-                "/api/users - List all users (admin only)",
-                "/api/stats - Get database statistics (admin only)",
+                "/api/key/authenticate - Test your API key",
                 "/api/key/generate - Generate new API key (admin only, POST)",
-                "/api/key/<key> - Get/Update/Delete API key (admin only)",
-                "/api/keys - List all API keys (admin only, GET)",
+                "/api/key/<key> - Get API key (admin only, GET)"
+                "/api/key/update/<key> - Update API key (admin only, PUT)",
+                "/api/key/delete/<key> - Delete API key (admin only, DELETE)",
+                "/api/key/list - List all API keys (admin only, GET)",
                 "",
                 "DATA MANAGEMENT ENDPOINTS",
                 "/api/data/load - Load and preprocess CSV file directly into the database (admin only, POST)",
-                "/api/data/load-to-existing - Load and preprocess CSV file and save to to an existing table in database (admin only, POST)"
-                "/api/data/processed-table-data/name/<file_name> - Get data by filename (admin only, GET)",
+                "/api/data/load-to-existing - Load and preprocess CSV file and save to to an existing table in database (admin only, POST)",
+                "/api/data/<file_name> - Get data by filename (admin only, GET)",
                 "/api/data/stats - Get statistics about loaded CSV files (admin only, GET)",
-                "/api/data/file-details/name/<file_name> - Get file details by name (admin only, GET)",
                 "",
-                "WEBHOOK ENDPOINTS (FOR SPLUNK INTEGRATION)",
-                "/api/webhook/splunk-alert - Receive Splunk alerts (POST, NO API KEY REQUIRED)",
-                "/api/webhook/splunk-alerts - Get all stored alerts (admin only, GET)",
-                "/api/webhook/splunk-alerts/<alert_id> - Get specific alert details (admin only, GET)",
-                "/api/webhook/splunk-alerts/<alert_id>/mark-processed - Mark alert as processed (admin only, POST)",
-                "/api/webhook/test - Test webhook functionality (POST/GET, NO API KEY REQUIRED)",
-                "/api/webhook/health - Webhook health check (GET, NO API KEY REQUIRED)",
+                "SPLUNK INTEGRATION ENDPOINTS",
+                "/api/splunk/alert - Receive Splunk alerts (POST, NO API KEY REQUIRED)",
+                "/api/splunk/alert/list- Get all stored alerts (admin only, GET)",
+                "/api/splunk/alert/<alert_id>/mark-processed - Mark alert as processed (admin only, POST)",
+                "/api/splunk/ingest/authenticate-checkpoint - Ingest authenticate checkpoint data (POST, NO API KEY REQUIRED)"
             ]
-        })
-
-    @app.route('/webhook-info')
-    def webhook_info():
-        port = app.config.get('PORT', 5000)
-        hostname_url = f"http://{app.config['API_HOST']}:{port}"
-        return jsonify({
-            "webhook_configuration": {
-                "splunk_webhook_url": f"{hostname_url}/api/webhook/splunk-alert",
-                "method": "POST",
-                "content_type": "application/json",
-                "authentication": "None required for webhook endpoint",
-                "description": "This endpoint receives alerts from Splunk and stores them in the database"
-            }
         })
     
     return app

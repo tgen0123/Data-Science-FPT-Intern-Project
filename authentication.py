@@ -20,19 +20,15 @@ def require_api_key(f):
         if not api_key:
             return {"error": "API key required"}, 401
             
-        # Check if API key exists in database
         cursor = get_cursor()
         cursor.execute('SELECT * FROM api_keys WHERE [key] = ?', (api_key,))
         
         row = cursor.fetchone()
         if not row:
             return {"error": "Invalid API key"}, 401
-        
-        # Get column names to create a dictionary
+
         columns = [column[0] for column in cursor.description]
         api_user = dict_from_row(row, columns)
-        
-        # Add the API user info to the request
         request.api_user = {
             'user': api_user['username'],
             'rate_limit': api_user['rate_limit'],

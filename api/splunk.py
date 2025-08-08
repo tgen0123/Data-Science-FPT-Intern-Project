@@ -1,63 +1,17 @@
 import json
 import traceback
+import data_handler
+import authentication
+import pandas as pd
+from .helper import parse_splunk_trigger_time
 from datetime import datetime
-from typing import Optional, Dict, Any, List, Tuple, Union
+from typing import Optional, Dict, Any, List, Tuple
 from flask import Blueprint, request, jsonify, Response
-from auth import get_cursor, require_api_key
-from database import get_db
 
-# A type alias for JSON-like dictionaries for clearer type hinting.
 JsonDict = Dict[str, Any]
+splunk_bp = Blueprint('splunk', __name__, url_prefix='/api/splunk')
 
-webhook_bp = Blueprint('webhook', __name__, url_prefix='/api/webhook')
-
-def parse_splunk_trigger_time(time_str: str) -> datetime:
-    """
-    Parses a time string from a Splunk webhook into a datetime object.
-
-    This function iterates through a list of common time formats that Splunk uses.
-    It handles various precisions, timezones, and the 'Z' (Zulu/UTC) suffix.
-    If the provided string is empty or none of the formats match, it defaults
-    to the current time.
-
-    Args:
-        time_str: The time string received from Splunk.
-
-    Returns:
-        A datetime object representing the parsed time, or the
-        current time if parsing fails.
-    """
-    if not time_str:
-        return datetime.now()
-    
-    # Common Splunk time formats
-    time_formats: List[str] = [
-        '%Y-%m-%d %H:%M:%S',           # 2024-07-02 10:30:00
-        '%Y-%m-%dT%H:%M:%S',           # 2024-07-02T10:30:00
-        '%Y-%m-%dT%H:%M:%SZ',          # 2024-07-02T10:30:00Z
-        '%Y-%m-%dT%H:%M:%S.%f',        # 2024-07-02T10:30:00.123456
-        '%Y-%m-%dT%H:%M:%S.%fZ',       # 2024-07-02T10:30:00.123456Z
-        '%Y-%m-%dT%H:%M:%S%z',         # 2024-07-02T10:30:00+0700
-        '%Y-%m-%dT%H:%M:%S.%f%z',      # 2024-07-02T10:30:00.123456+0700
-    ]
-    
-    for fmt in time_formats:
-        try:
-            if time_str.endswith('Z'):
-                time_str_clean: str = time_str[:-1]
-                return datetime.strptime(time_str_clean, fmt.replace('Z', ''))
-            else:
-                return datetime.strptime(time_str, fmt)
-        except ValueError:
-            continue
-    
-    try:
-        return datetime.fromisoformat(time_str.replace('Z', '+00:00'))
-    except:
-        print(f"Could not parse time string: {time_str}, using current time")
-        return datetime.now()
-
-@webhook_bp.route('/splunk-alert', methods=['POST'])
+@splunk_bp.route('/alert', methods=['POST'])
 def receive_splunk_alert() -> Tuple[Response, int]:
     """
     Receives and stores webhook alerts from Splunk in the database.
@@ -124,7 +78,7 @@ def receive_splunk_alert() -> Tuple[Response, int]:
         search_query: str = alert_data.get('search', alert_data.get('query', ''))
         alert_data_json: str = json.dumps(alert_data, default=str)
 
-        db = get_db()
+        db = database.get_db()
         cursor = db.cursor()
         
         cursor.execute('''
@@ -157,7 +111,7 @@ def receive_splunk_alert() -> Tuple[Response, int]:
         traceback.print_exc()
 
         try:
-            db = get_db()
+            db = database.get_db()
             cursor = db.cursor()
             cursor.execute('''
             INSERT INTO splunk_alerts 
@@ -177,8 +131,8 @@ def receive_splunk_alert() -> Tuple[Response, int]:
             "message": error_msg,
         }), 500
 
-@webhook_bp.route('/splunk-alerts', methods=['GET'])
-@require_api_key
+@splunk_bp.route('/alert/list', methods=['GET'])
+@authentication.require_api_key
 def get_splunk_alerts() -> Tuple[Response, int]:
     """
     Retrieves stored Splunk alerts from the database with filtering and pagination.
@@ -201,9 +155,7 @@ def get_splunk_alerts() -> Tuple[Response, int]:
         applied filters, and summary statistics. Returns 200 on success, 500 on error.
     """
     try:
-        cursor = get_cursor()
-        
-        # Get query parameters with defaults
+        cursor = authentication.get_cursor()
         limit: int = request.args.get('limit', 50, type=int)
         offset: int = request.args.get('offset', 0, type=int)
         processed: Optional[str] = request.args.get('processed', None)
@@ -211,8 +163,6 @@ def get_splunk_alerts() -> Tuple[Response, int]:
         from_date: Optional[str] = request.args.get('from_date', None)
         to_date: Optional[str] = request.args.get('to_date', None)
         search_term: Optional[str] = request.args.get('search', None)
-        
-        # Build WHERE clause and parameters
         where_conditions: List[str] = []
         params: List[Any] = []
         
@@ -239,7 +189,6 @@ def get_splunk_alerts() -> Tuple[Response, int]:
         
         where_clause: str = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
         
-        # Get alerts with pagination
         query: str = f'''
         SELECT id, alert_name, search_name, severity, trigger_time, result_count, 
                search_query, alert_data, source_ip, user_agent, received_at, 
@@ -255,7 +204,6 @@ def get_splunk_alerts() -> Tuple[Response, int]:
         alerts: List[JsonDict] = []
         
         for row in cursor.fetchall():
-            # Parse alert_data JSON
             alert_data_dict: JsonDict = {}
             try:
                 alert_data_dict = json.loads(row[7]) if row[7] else {}
@@ -279,13 +227,10 @@ def get_splunk_alerts() -> Tuple[Response, int]:
                 "error_message": row[13]
             })
         
-        # Get total count
         count_query: str = f"SELECT COUNT(*) FROM splunk_alerts {where_clause}"
         cursor.execute(count_query, params)
         total_count_result = cursor.fetchone()
         total_count: int = total_count_result[0] if total_count_result else 0
-        
-        # Get summary statistics
         stats_query: str = '''
         SELECT 
             severity,
@@ -326,74 +271,8 @@ def get_splunk_alerts() -> Tuple[Response, int]:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-@webhook_bp.route('/splunk-alerts/<int:alert_id>', methods=['GET'])
-@require_api_key
-def get_splunk_alert_details(alert_id: int) -> Tuple[Response, int]:
-    """
-    Retrieves detailed information about a specific Splunk alert by its ID.
-
-    This endpoint requires API key authentication and provides a way to fetch all
-    stored data for a single alert.
-
-    Args:
-        alert_id: The unique identifier of the alert to retrieve, passed
-                  in the URL path.
-
-    Returns:
-        A tuple containing a Flask JSON response and an HTTP status code.
-        - On success, returns the alert's details with a 200 status.
-        - If the alert is not found, returns an error message with a 404 status.
-        - On database or other errors, returns an error message with a 500 status.
-    """
-    try:
-        cursor = get_cursor()
-        
-        cursor.execute('''
-        SELECT id, alert_name, search_name, severity, trigger_time, result_count, 
-               search_query, alert_data, source_ip, user_agent, received_at, 
-               processed, processed_at, error_message
-        FROM splunk_alerts
-        WHERE id = ?
-        ''', (alert_id,))
-        
-        row = cursor.fetchone()
-        
-        if not row:
-            return jsonify({"error": "Alert not found"}), 404
-        
-        # Parse alert_data JSON
-        alert_data_dict: JsonDict = {}
-        try:
-            alert_data_dict = json.loads(row[7]) if row[7] else {}
-        except:
-            alert_data_dict = {"raw_data": row[7]}
-        
-        alert_details: JsonDict = {
-            "id": row[0],
-            "alert_name": row[1],
-            "search_name": row[2],
-            "severity": row[3],
-            "trigger_time": row[4].isoformat() if row[4] else None,
-            "result_count": row[5],
-            "search_query": row[6],
-            "alert_data": alert_data_dict,
-            "source_ip": row[8],
-            "user_agent": row[9],
-            "received_at": row[10].isoformat() if row[10] else None,
-            "processed": bool(row[11]),
-            "processed_at": row[12].isoformat() if row[12] else None,
-            "error_message": row[13]
-        }
-        
-        return jsonify(alert_details)
-        
-    except Exception as e:
-        print(f"Error getting alert details: {e}")
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
-
-@webhook_bp.route('/splunk-alerts/<int:alert_id>/mark-processed', methods=['POST'])
-@require_api_key
+@splunk_bp.route('/alert/<int:alert_id>/mark-processed', methods=['POST'])
+@authentication.require_api_key
 def mark_alert_processed(alert_id: int) -> Tuple[Response, int]:
     """
     Marks a specific Splunk alert as processed.
@@ -411,7 +290,7 @@ def mark_alert_processed(alert_id: int) -> Tuple[Response, int]:
         - On database or other errors, returns an error message with a 500 status.
     """
     try:
-        db = get_db()
+        db = database.get_db()
         cursor = db.cursor()
         
         cursor.execute('''
@@ -436,50 +315,26 @@ def mark_alert_processed(alert_id: int) -> Tuple[Response, int]:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-@webhook_bp.route('/test', methods=['POST', 'GET'])
-def test_webhook() -> Tuple[Response, int]:
+@splunk_bp.route('/ingest', methods=['POST'])
+@authentication.require_admin
+def ingest_data():
     """
-    A simple test endpoint to verify that the webhook blueprint is working.
-
-    It accepts both GET and POST requests and echoes back information about the
-    request it received, such as the method, headers, and any data payload.
-
-    Returns:
-        A tuple containing a JSON confirmation and a 200 HTTP status code.
+    Receives MAC Spoofing data, preprocesses it, and dynamically finds a matching
+    table to append to. If no match is found, a new table is created.
     """
-    return jsonify({
-        "status": "success",
-        "message": "Webhook endpoint is working",
-        "timestamp": datetime.now().isoformat(),
-        "method": request.method,
-        "headers": dict(request.headers),
-        "data": request.get_json() if request.is_json else request.form.to_dict()
-    })
+    results = request.get_json()
+    if not isinstance(results, list) or not results:
+        return jsonify({"error": "Request body must be a non-empty JSON list."}), 400
 
-# Health check endpoint
-@webhook_bp.route('/health', methods=['GET'])
-def health_check() -> Tuple[Response, int]:
-    """
-    Provides a health check endpoint for monitoring purposes.
-
-    This endpoint can be used by automated systems to verify the service's status.
-    It checks for basic functionality, such as database connectivity.
-
-    Returns:
-        A tuple containing a JSON response with the system health status and a 200
-        HTTP status code. The status of dependencies like the database is included.
-    """
     try:
-        # Test database connectivity
-        cursor = get_cursor()
-        cursor.execute('SELECT 1')
-        db_status: str = "healthy"
+        raw_df = pd.DataFrame(results)
+        result = data_handler.dynamically_append_data(raw_df, new_table_name_base="new_data")
+
+        if "error" in result:
+            return jsonify({"success": False, "error": result["error"]}), result.get("status_code", 500)
+        
+        return jsonify({"success": True, "details": result})
+
     except Exception as e:
-        db_status = f"error: {str(e)}"
-    
-    return jsonify({
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-        "database": db_status,
-        "webhook_endpoint": "/api/webhook/splunk-alert"
-    })
+        traceback.print_exc()
+        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500

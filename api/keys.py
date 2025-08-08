@@ -1,39 +1,13 @@
 from flask import Blueprint, jsonify, request
-from auth import require_api_key, generate_api_key, require_admin
+from authentication import require_api_key, require_admin
 from database import get_db, get_cursor, dict_from_row
+from .helper import create_new_api_key
 
-api_bp = Blueprint('api', __name__, url_prefix='/api')
+keys_bp = Blueprint('api', __name__, url_prefix='/api')
 
-def create_new_api_key(username, rate_limit=100, is_admin=False):
-    """
-    Create a new API key for a user and store in database.
-    
-    Args:
-        username (str): Username to associate with the key
-        rate_limit (int, optional): Maximum requests per timeframe. Defaults to 100.
-        is_admin (bool, optional): Whether the key has admin privileges. Defaults to False.
-        
-    Returns:
-        str: The newly generated API key
-    """
-    new_key = generate_api_key()
-    
-    cursor = get_cursor()
-    cursor.execute(
-        'INSERT INTO api_keys ([key], username, rate_limit, is_admin) VALUES (?, ?, ?, ?)',
-        (new_key, username, rate_limit, 1 if is_admin else 0)
-    )
-    db = get_db()
-    db.commit()
-    
-    return new_key
-
-# ---- API Endpoints ----
-
-@api_bp.route('/key/generate', methods=['POST'])
+@keys_bp.route('/key/generate', methods=['POST'])
 @require_api_key
 @require_admin
-
 def create_api_key():
     """
     Generate a new API key - restricted to admin users.
@@ -64,7 +38,7 @@ def create_api_key():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@api_bp.route('/key/<key>', methods=['GET'])
+@keys_bp.route('/key/<key>', methods=['GET'])
 @require_api_key
 @require_admin
 def get_api_key_details(key):
@@ -81,8 +55,7 @@ def get_api_key_details(key):
         row = cursor.fetchone()
         if not row:
             return jsonify({"error": "API key not found"}), 404
-        
-        # Get column names to create a dictionary
+
         columns = [column[0] for column in cursor.description]
         api_key_details = dict_from_row(row, columns)
         
@@ -95,7 +68,7 @@ def get_api_key_details(key):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@api_bp.route('/key/<key>', methods=['PUT'])
+@keys_bp.route('/key/update/<key>', methods=['PUT'])
 @require_api_key
 @require_admin
 def update_api_key(key):
@@ -110,14 +83,12 @@ def update_api_key(key):
         return jsonify({"error": "No update data provided"}), 400
     
     try:
-        # Check if key exists
         cursor = get_cursor()
         cursor.execute('SELECT * FROM api_keys WHERE [key] = ?', (key,))
         
         if not cursor.fetchone():
             return jsonify({"error": "API key not found"}), 404
-        
-        # Prepare update fields
+
         update_fields = []
         update_values = []
         
@@ -136,17 +107,12 @@ def update_api_key(key):
         if not update_fields:
             return jsonify({"error": "No valid fields to update"}), 400
         
-        # Build the update query
         query = f"UPDATE api_keys SET {', '.join(update_fields)} WHERE [key] = ?"
         update_values.append(key)
-        
-        # Execute the update
         db = get_db()
         cursor = db.cursor()
         cursor.execute(query, update_values)
         db.commit()
-        
-        # Get the updated record
         cursor.execute('SELECT * FROM api_keys WHERE [key] = ?', (key,))
         row = cursor.fetchone()
         columns = [column[0] for column in cursor.description]
@@ -162,7 +128,7 @@ def update_api_key(key):
     except Exception as e:
         return jsonify({"error": f"Failed to update API key: {str(e)}"}), 500
 
-@api_bp.route('/key/<key>', methods=['DELETE'])
+@keys_bp.route('/key/delete/<key>', methods=['DELETE'])
 @require_api_key
 @require_admin
 def delete_api_key(key):
@@ -173,13 +139,11 @@ def delete_api_key(key):
     Access is restricted to API keys with admin privileges.
     The key being used for authentication cannot be deleted.
     """
-    # Don't allow deletion of the key being used
     current_key = request.headers.get('X-API-Key')
     if key == current_key:
         return jsonify({"error": "Cannot delete the API key currently in use"}), 400
     
     try:
-        # Check if key exists
         cursor = get_cursor()
         cursor.execute('SELECT username FROM api_keys WHERE [key] = ?', (key,))
         
@@ -188,8 +152,6 @@ def delete_api_key(key):
             return jsonify({"error": "API key not found"}), 404
         
         username = row[0]
-        
-        # Delete the key
         db = get_db()
         cursor = db.cursor()
         cursor.execute('DELETE FROM api_keys WHERE [key] = ?', (key,))
@@ -203,7 +165,7 @@ def delete_api_key(key):
     except Exception as e:
         return jsonify({"error": f"Failed to delete API key: {str(e)}"}), 500
 
-@api_bp.route('/keys', methods=['GET'])
+@keys_bp.route('/key/list', methods=['GET'])
 @require_api_key
 @require_admin
 def list_api_keys():
@@ -236,7 +198,7 @@ def list_api_keys():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@api_bp.route('/authenticate')
+@keys_bp.route('/key/authenticate')
 @require_api_key
 def authenticate():
     """
@@ -251,59 +213,4 @@ def authenticate():
         "user": request.api_user['user'],
         "rate_limit": request.api_user['rate_limit'],
         "is_admin": request.api_user.get('is_admin', False)
-    })
-
-@api_bp.route('/users', methods=['GET'])
-@require_api_key
-@require_admin
-def list_users():
-    """
-    List all users in the system (admin only).
-    
-    This endpoint retrieves a list of all unique usernames from the 
-    vpn_logs table. It requires an API key with admin privileges.
-    """
-    cursor = get_cursor()
-    cursor.execute('SELECT DISTINCT username FROM vpn_logs')
-    
-    users = [row[0] for row in cursor.fetchall()]
-    
-    return jsonify({
-        "count": len(users),
-        "users": users
-    })
-
-@api_bp.route('/stats', methods=['GET'])
-@require_api_key
-@require_admin
-def get_stats():
-    """
-    Get statistics about the database (admin only).
-    
-    This endpoint provides various statistics about the database.
-    Access is restricted to API keys with admin privileges.
-    """
-    cursor = get_cursor()
-    
-    # Get user count
-    cursor.execute('SELECT COUNT(DISTINCT username) AS user_count FROM vpn_logs')
-    user_count = cursor.fetchone()[0]
-    
-    # Get IP count
-    cursor.execute('SELECT COUNT(DISTINCT source_ip) AS ip_count FROM vpn_logs')
-    ip_count = cursor.fetchone()[0]
-    
-    # Get total records
-    cursor.execute('SELECT COUNT(*) AS record_count FROM vpn_logs')
-    record_count = cursor.fetchone()[0]
-    
-    # Get API key count
-    cursor.execute('SELECT COUNT(*) AS key_count FROM api_keys')
-    key_count = cursor.fetchone()[0]
-    
-    return jsonify({
-        "users": user_count,
-        "unique_ips": ip_count,
-        "total_records": record_count,
-        "api_keys": key_count
     })
